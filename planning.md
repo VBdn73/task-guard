@@ -1,6 +1,6 @@
 # Planned work and investigations
 
-This is a development roadmap, not a promise that the client API supports task blocking. The current plugin is a read-only scaffold.
+This is a development roadmap, not a promise of complete task blocking. The current plugin retains a manual Helwyr overlay proof of concept. Discovery tooling has been removed from Task Guard. See [reapers-choice-findings.md](reapers-choice-findings.md) for the live-client findings and the plan for other Reaper choices.
 
 ## 1. Confirm feasibility and compliance
 

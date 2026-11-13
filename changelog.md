@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+- Retain manual Helwyr overlay controls with static visuals and input interception.
+- Remove interface discovery, parent dumps, native enabled-state probes and their configuration/tests from Task Guard.
+- Add `reapers-choice-findings.md` documenting captured IDs, user-reported results, limitations and the extension plan.
+- Keep mocked lifecycle/overlay regression tests. No automatic or complete task protection is claimed.
+
 ## 0.0.1 - 2026-11-13
 
 ### Added

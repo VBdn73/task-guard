@@ -18,8 +18,9 @@ local function event()
 end
 
 Event = { SettingsLayerReady = event(), ContentLayerReady = event() }
-id = { Font = { MUSEO_SANS_15PT_REGULAR = 1 } }
-ui = { Text = {} }
+Event.Logic = event()
+id = { Font = { MUSEO_SANS_15PT_REGULAR = 1 }, StyleSheet = { BUTTON_DEFAULT = 1 } }
+ui = { Text = {}, Button = {}, Hook = { ONBUTTONPRESSED = 1 }, ComponentType = { BUTTON = 1 } }
 
 function ui.Text.new(host)
     assert(host, "Expected a host component")
@@ -28,6 +29,7 @@ function ui.Text.new(host)
     return {
         SetSize = function() end,
         SetPos = function() end,
+        Subscribe = function() end,
         Destroy = function()
             assert(not dead, "View destroyed twice")
             dead = true
@@ -35,6 +37,7 @@ function ui.Text.new(host)
         end,
     }
 end
+ui.Button.new = ui.Text.new
 
 dofile("main.lua")
 assert(type(PluginShutdown) == "function")
@@ -42,10 +45,10 @@ assert(type(PluginShutdown) == "function")
 local host = {}
 handlers[1]["taskGuard.settings"]({ component = host })
 handlers[2]["taskGuard.content"]({ component = host })
-assert(created == 2 and destroyed == 0)
+assert(created == 6 and destroyed == 0)
 
 handlers[1]["taskGuard.settings"]({ component = host })
-assert(created == 3 and destroyed == 1, "Reopening must clean up the old view")
+assert(created == 9 and destroyed == 3, "Reopening must clean up the old view")
 
 PluginShutdown()
 assert(destroyed == created, "Shutdown must clean up all views")

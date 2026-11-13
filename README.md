@@ -1,68 +1,68 @@
 # Task Guard - Slayer & Reaper
 
-**Task Guard** is a RuneScape plugin project intended to help prevent accidentally choosing unwanted Slayer tasks through a Slayer cape or unwanted Reaper tasks through Reaper's Choice.
+Task Guard is intended to help prevent unwanted Slayer cape choices and Reaper's Choice selections.
 
-**Status: development scaffold only. No tasks are currently blocked, disabled or protected.** API feasibility and compliance still need to be verified. This project is not represented as approved for distribution.
+**Status: manual Helwyr overlay proof of concept only. No automatic task protection.** The user confirmed that tested clicks were intercepted without choosing Helwyr and that the static grey appearance works. Full hitbox coverage and alternative input routes remain unverified. This project is not represented as approved for distribution.
 
 ## Current features
 
-- Loadable plugin entry point and manifest, version `0.0.1`.
-- Read-only development status in the plugin settings and ribbon panel.
-- View cleanup and event unsubscription on shutdown.
-- No external dependencies or additional permissions.
+- Plugin settings and ribbon controls to show/remove a Helwyr overlay.
+- Static dark background and grey text, without the standard button hover/press style.
+- Validation of the captured label's identity, visibility and bounds before creating the overlay.
+- Removal on detected target movement/replacement, with shutdown cleanup attempts.
+- No discovery scans, native enabled-state probes, automatic task actions, external dependencies or additional permissions.
 
-## Planned behaviour
-
-- Separate, user-managed lists for Slayer cape task choice and Reaper's Choice.
-- Prevent selecting guarded entries only if a supported, permitted API mechanism is available.
-- Clearly distinguish plugin guards from RuneScape's own block/prefer lists. Task Guard will not change those lists.
-- Never choose, accept, reroll or complete tasks automatically.
-- Leave unrelated interfaces and unrecognised choices unchanged.
-
-These are goals, not implemented features. See [planning.md](planning.md) for feasibility checks and milestones, and [changelog.md](changelog.md) for changes.
+See **[reapers-choice-findings.md](reapers-choice-findings.md)** for the captured interface structure, evidence, limitations and steps needed to support other Reaper choices. See [planning.md](planning.md) for the broader roadmap.
 
 ## Local development
 
-Follow the [RuneScape API getting-started guide](https://developer.runescape.com/rs/getting-started.html). Keep this folder at `RuneScape-BETA/dev_plugins/task-guard/`. In the client console (**Alt + `**), run:
+Follow the [RuneScape API getting-started guide](https://developer.runescape.com/rs/getting-started.html). Keep this folder at `RuneScape-BETA/dev_plugins/task-guard/`. In the client console (**Alt + `**):
 
 ```text
 prf
 pon task-guard
 ```
 
-Open the plugin settings or ribbon panel to see the development notice. After Lua changes, run `prl task-guard`; after manifest changes, run `prf` first.
+After Lua changes, run `prl task-guard`; after manifest changes, run `prf` first.
 
-Run the mocked lifecycle test from this directory using Lua 5.4:
+With Reaper's Choice open and Helwyr visible, open Task Guard settings and press **Overlay Helwyr**. Use **Remove overlay** when finished. The overlay covers the known text bounds only and is removed rather than reapplied when movement is detected.
+
+**A failed block can select a task.** Only test a choice you are willing to receive. Edges, context menus, keyboard/controller routes and separate confirmation paths are not verified. Close/reopen the game dialog if cleanup fails. Confirm the approach is permitted with Jagex before distributing.
+
+Run the mocked tests using Lua 5.4 from this directory:
 
 ```powershell
 lua tests/lifecycle.lua
+lua tests/reaper-overlay.lua
 ```
 
-Mocked tests do not verify native UI behaviour or protection against clicks. Live-client testing is required before claiming support.
+Mocks do not verify native rendering or click interception.
 
 ## Project layout
 
 ```text
-main.lua              Plugin lifecycle and view event handlers
-plugin.json           Client manifest
-constants.lua         Shared names and event prefix
-status-view.lua       Read-only placeholder panel
-tests/lifecycle.lua   Mocked lifecycle smoke test
-planning.md           Implementation backlog and validation checklist
-changelog.md          Version history
+main.lua                    Plugin lifecycle and view event handlers
+status-view.lua             Manual overlay controls and status
+reaper-config.lua           Captured Helwyr label address
+reaper-overlay.lua          Owned overlay creation, validation and cleanup
+tests/lifecycle.lua         Mocked lifecycle coverage
+tests/reaper-overlay.lua    Mocked overlay coverage
+reapers-choice-findings.md  Findings, limitations and extension plan
+planning.md                 Broader implementation roadmap
+changelog.md                Version history
 ```
+
+## Planned behaviour
+
+Separate, user-managed Slayer and Reaper guard lists, empty by default. Never automatically choose, accept, reroll or complete tasks. Leave unrelated interfaces and unknown choices unchanged. Do not modify the game's own block/prefer lists. These features are not implemented.
 
 ## Feedback and collaboration
 
-Report bugs and suggestions to [vincent.rs.plugins@gmail.com](mailto:vincent.rs.plugins@gmail.com), or use the repository issue tracker once one is available. Include reproduction steps and your client version. Discuss substantial contributions before implementing them; avoid sharing personal information publicly.
+Report bugs and suggestions to [vincent.rs.plugins@gmail.com](mailto:vincent.rs.plugins@gmail.com). Include reproduction steps and client version. Discuss substantial contributions before implementing them; avoid sharing personal information publicly.
 
-## Permissions
+## Permissions and data protection
 
-This plugin requests no additional permissions.
-
-## Data protection
-
-The current scaffold only creates plugin-owned status text. It does not read task choices, chat, inventory or character identity; it does not persist settings or transmit data to the developer or external services. Persistent guard lists are planned but not implemented. This section must be updated when data handling changes.
+No additional permissions are requested. The overlay reads the configured component's type, restriction, visibility, exact text, parent and geometry. It creates plugin-owned UI and logs overlay actions/errors to the client console. It does not read chat, inventory or character identity, persist settings, transmit data externally or change native task actions. The captured label address is stored in `reaper-config.lua`; dynamic IDs are not assumed to be stable.
 
 ## EULA
 

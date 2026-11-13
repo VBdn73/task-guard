@@ -1,6 +1,8 @@
 local constants = require("constants")
 local statusView = require("status-view")
 local destroyViews = {}
+local overlay = require("reaper-overlay").new(require("reaper-config"))
+Event.Logic.Subscribe(constants.EVENT_PREFIX .. ".overlay", overlay.update)
 
 local function closeView(kind)
     local destroy = destroyViews[kind]
@@ -15,7 +17,7 @@ end
 
 local function openView(kind, host)
     closeView(kind)
-    local ok, result = pcall(statusView.build, host)
+    local ok, result = pcall(statusView.build, host, overlay)
     if ok then
         destroyViews[kind] = result
     else
@@ -32,6 +34,8 @@ Event.ContentLayerReady.Subscribe(constants.EVENT_PREFIX .. ".content", function
 end)
 
 function PluginShutdown()
+    print("[task-guard] " .. overlay.remove())
+    Event.Logic.Unsubscribe(constants.EVENT_PREFIX .. ".overlay")
     Event.SettingsLayerReady.Unsubscribe(constants.EVENT_PREFIX .. ".settings")
     Event.ContentLayerReady.Unsubscribe(constants.EVENT_PREFIX .. ".content")
     closeView("settings")
