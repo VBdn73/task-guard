@@ -1,0 +1,11 @@
+# Local editor files
+.idea/
+.vscode/
+*.iml
+
+# Release packages
+dist/
+*.zip
+
+# Compiled Lua
+*.luac
