@@ -1,168 +1,57 @@
 # Task Guard - Slayer & Reaper
 
-Task Guard is intended to help prevent unwanted Slayer cape choices and Reaper's Choice selections.
+Helps prevent unwanted Slayer cape and Reaper's Choice selections using mouse overlays and saved task preferences.
 
-**Status: automatic, settings-driven mouse overlays; full protection is not verified.** The user confirmed that tested Helwyr clicks were intercepted without choosing the task and that the static grey appearance works. Other tasks, full hitbox coverage and alternative input routes still need client testing. This project is not represented as approved for distribution.
+## Features
 
-## Current features
+- Separate Reaper and Slayer task preferences in plugin settings and the ribbon, with search and **Enable all / Disable all** controls. All tasks are allowed by default.
+- Mouse shields and static grey artwork for disabled tasks in recognised native pickers, plus requirement tooltips for recognised game-blocked rows.
+- Client-default or alphabetical ordering (ascending or descending), with optional enabled-first sorting in plugin menus and recognised native pickers.
+- Per-character settings, a bundled Slayer catalogue and local discovery of new, unique visible Reaper tasks.
+- No automatic task selection, acceptance, rerolling or completion; the game's block/prefer lists are unchanged.
 
-- General, Reaper and Slayer settings tabs styled like Pre-flight Check, with two tasks per row, green enabled/red disabled backgrounds and checkboxes. Both task tabs offer independent saved preferences and Enable all/Disable all buttons.
-- All preferences and discovered Reaper tasks are stored per in-game character name (ignoring case and surrounding spaces). Switching characters reloads settings automatically; saving is blocked until a valid logged-in name is available. Renaming starts a separate profile. Old shared settings are left untouched and are not imported.
-- Slayer settings use a bundled assignment catalogue from the RuneScape Wiki, with all tasks enabled by default. Client default currently uses the alphabetical catalogue order for Slayer. Both sets of preferences are saved locally through PersistentDB.
-- The global Slayer catalogue covers all masters, cross-checked against the wiki's twelve master assignment tables as well as its overview. It includes Sanguine crawlers and Sanguine werewolves as separate tasks. Captured Laniakea names take precedence over wiki spelling; older saved spelling variants are migrated without losing disabled preferences. One Ravenous strigoi setting covers the known duplicate picker entries. The catalogue is bundled, not fetched over the network at runtime.
-- Experimental Slayer mouse shields use interface 201 and the exact title `Select your Slayer task`, with the shared Spria/Laniakea list structure. Known 230 × 20 rows overlapping the viewport with matching companion labels and complete captured background artwork receive shields; native clipping is expected to constrain partially visible shields and needs client verification. Both Ravenous strigoi rows use the same preference; other duplicate names and unknown layouts are left untouched. Native disabled backgrounds receive requirement targets with lazy hover tooltips and the same static canvas as plugin-disabled rows. Right-click Enable/Disable actions save the global preference while retaining the native default choice; game-blocked rows do not offer these actions. The native Slayer picker also applies General alphabetical and enabled-first sorting, moving complete rows and restoring original positions when sorting is off, the dialog closes or the plugin shuts down. Click interception, native action mapping after sorting, clipping/scroll offsets, hover delivery and other masters still need client testing.
-- Both the plugin settings and ribbon show identical General, Reaper and Slayer tabs. General offers saved Client default/Alphabetical task ordering and an independent enabled-first toggle. Both plugin task lists update immediately.
-  Narrow windows use Gen / Reap / Slay with tighter tab widths and no gaps; wider windows restore the full names.
-- Client default in the plugin lists matches the native November 2026 picker sequence, read left-to-right across rows. Newly discovered tasks append to the catalogue. Saved enabled/disabled preferences are unchanged when the catalogue order changes.
-- Alphabetical ordering ignores a leading “The ” (e.g. The Ambassador sorts under A), while keeping the full displayed task names. This applies to settings, ribbon and native picker ordering.
-- Native enabled-first sorting puts both plugin-disabled tasks and tasks with complete in-game disabled backgrounds at the bottom. Settings and ribbon sorting use plugin preferences only, since game availability is known only in the open native picker.
-- Experimental native Reaper's Choice ordering uses those same preferences. Complete recognised rows (background sprites, named/empty labels and companion-list labels) move together without replacing task names or dispatching actions. Client default with enabled-first off restores original positions; shutdown and dialog closure attempt restoration too. Unknown or incomplete layouts are left untouched. Native action mapping, hover, scrolling and restoration still require in-client verification.
-- Saved Reaper preferences (enabled means allowed; all tasks are allowed by default). Disabled tasks receive automatic overlays when uniquely resolved in the captured Reaper choice list.
-- Ribbon task toggles using the same saved preferences, with responsive columns sized to fit the longest boss name and checkbox.
-- Side-by-side Enable all and Disable all buttons in both task tabs in settings and ribbon menus. Each action changes only that tab's preferences; failed saves restore the previous state.
-- Dynamic discovery of new, unique visible task labels in the validated Reaper choice list. Discovered tasks are saved locally, default to enabled, and appear in both menus automatically.
-- Task names are used directly for display, persistence and native matching, without runtime aliases. Legacy Telos/Black Stone Dragon/Giant Mole settings are migrated once, preserving disabled preferences. A future game-side rename is treated as a new enabled task.
-- Mouse shield over a static canvas for both plugin-disabled and requirement-disabled rows. The canvas covers underlying native animation, draws captured disabled artwork and a fixed-colour centered label. Its nine sprite draw commands and text are not separate UI components. An earlier opaque-background/separate-label experiment was withdrawn after client testing reported selectable plugin-disabled tasks. Canvas appearance, performance and interception require client verification; the input shield and total two-component-per-row count are retained.
-- Validation of the captured label's identity, visibility and bounds before creating the overlay.
-- Existing overlays follow movement of the same task row without rebuilding. Changed identity, parent or dimensions, and choice-dialog closure, remove them; shutdown independently cleans up each overlay. Retained menu callbacks cannot recreate overlays after shutdown.
-- PrettyUI hover tooltip; scoped enumeration of the captured choice list, without global scans, native enabled-state changes, automatic task actions or additional permissions.
+## How to use
 
-See [planning.md](planning.md) for the broader roadmap. The native-layout assumptions and remaining client checks are described below.
+1. Install **PrettyUI** (mod.io ID `6398181`), the required dependency, and enable the plugin.
+2. Open plugin settings or the ribbon. In **Reaper** or **Slayer**, disable tasks you want guarded. Bulk controls affect tasks matching the current search.
+3. In **General**, choose task ordering and optionally enable enabled-first sorting. Alphabetical sorting ignores a leading “The”.
+4. Open the relevant game picker. Recognised disabled rows receive overlays; right-click supported, available rows to enable or disable them. Open and scroll Reaper's Choice to discover new visible tasks.
+
+## Limitations
+
+- Guards cover recognised task rows in supported English pickers. Unknown, ambiguous, restricted or incomplete rows are left untouched.
+- Mouse overlays are not a guarantee against task selection through other input routes. Close and reopen the picker if overlays or sorting do not clear correctly.
+- New Reaper tasks default to allowed; game-side renames can become new tasks. No catalogue updates are fetched online.
+- Saving requires a valid logged-in character name. Renaming starts a separate profile; old device-wide settings are not imported.
+
+See [changelog.md](changelog.md) for release notes and [planning.md](planning.md) for planned work.
+
+## Feedback and collaboration
+
+Report bugs or propose contributions through the repository's issue tracker or email [vincent.rs.plugins@gmail.com](mailto:vincent.rs.plugins@gmail.com). Include reproduction steps and your client version; discuss substantial contributions before implementing them and avoid posting personal information publicly.
+
+## Permissions
+
+This plugin requests no additional permissions.
+
+## Data protection
+
+**Case 1 (local only):** The plugin reads your character's display name to select a profile and visible picker labels, component state, geometry and artwork to identify task rows. Task preferences, ordering and discovered Reaper names are stored locally through `PersistentDB`, keyed by character name with case and surrounding spaces ignored. No chat or inventory access; nothing is transmitted to the developer or external services.
+
+Settings persist across reloads and client restarts with no automatic expiry. Reusing a display name on the same device can inherit its settings. **Enable all** changes matching preferences, not stored names. Disabling does not erase data; there is no full-data deletion control, and uninstalling should not be assumed to clear the client database. Legacy shared settings remain stored. The developer cannot access or delete local data remotely.
 
 ## Local development
 
-Follow the [RuneScape API getting-started guide](https://developer.runescape.com/rs/getting-started.html). Keep this folder at `RuneScape-BETA/dev_plugins/task-guard/`. In the client console (**Alt + `**):
+Follow the [RuneScape API getting-started guide](https://developer.runescape.com/rs/getting-started.html). Place the repository in `RuneScape-BETA/dev_plugins/task-guard/` and install PrettyUI. In the client console (**Alt + `**), run:
 
 ```text
 prf
 pon task-guard
 ```
 
-After Lua changes, run `prl task-guard`; after manifest changes, run `prf` first. PrettyUI (dependency ID `6398181`) must be available.
+After Lua changes, use `prl task-guard`; after `plugin.json` changes, run `prf` first.
 
-The settings menu shows two Reaper tasks per row; the ribbon dynamically fits columns to the available width, boss names and checkboxes. Both views share saved preferences. Disable a task to overlay its label in Reaper's Choice; enable it to remove the overlay. Matching requires the captured interface 1761, the exact title `Pick A task`, and at least two distinct known boss labels. New unique task labels in that list are added automatically and default to enabled; ambiguous, restricted or unavailable labels are left untouched. Open and scroll through Reaper's Choice to discover visible new tasks. Discovery does not fetch updates from the wiki or inspect unopened choices. Open plugin menus rebuild when the catalogue grows. Matching is English-only and needs live-client validation after UI updates. Shields are reconciled each logic tick on settings changes, movement, replacement and closing/reopening.
-
-**A failed block can select a task.** Only test a choice you are willing to receive. Edges, context menus, keyboard/controller routes and separate confirmation paths are not verified. Close/reopen the game dialog if cleanup fails. Confirm the approach is permitted with Jagex before distributing.
-
-Run the mocked tests using Lua 5.4 from this directory:
-
-```powershell
-lua tests/lifecycle.lua
-lua tests/reaper-overlay.lua
-lua tests/settings.lua
-lua tests/settings-view.lua
-lua tests/reaper-guard.lua
-lua tests/reaper-order.lua
-lua tests/slayer-order.lua
-lua tests/slayer-guard.lua
-lua tests/slayer-catalogue.lua
-```
-
-Mocks do not verify native rendering or click interception.
-
-Plugin shutdown destroys owned views and overlays and unsubscribes event handlers.
-Owned UI cleanup skips controls whose interface is unloaded, whose handle is
-restricted or whose parent has changed. View cleanup is idempotent and attempts
-each child cleanup independently before destroying the parent view. These checks
-reduce stale-handle risks but do not establish that client shutdown freezes are fixed.
-Closing the Reaper choice dialog clears its overlays on the next logic tick, while
-leaving the watcher active for reopening. Hidden plugin menus skip refresh work;
-failed/disposed views are cleaned up. Tooltip positions are refreshed only for
-hovered rows, avoiding unnecessary positioning work when many tasks are disabled.
-Tooltips are allocated only on a row's first hover, rather than for every disabled
-task at picker-open. Each tooltip uses one canvas with static background, border
-and text draw commands, rather than PrettyUI's layer plus sprite/text children.
-Repeated hover ticks do not rewrite popup visibility or front ordering; positioning
-only writes when the row's rendered position changes.
-Owned overlay components are excluded from native discovery.
-Hover validation shares one pointer/scale snapshot per guard update or menu
-targeting pass, caches scroll offsets per parent and reuses each row's result.
-Caches are discarded afterward so native callbacks and the next tick see fresh
-pointer positions and scrolling.
-Normal MiniMenuReady events reuse the latest reconciled logic snapshot rather
-than running ordering/discovery and overlay reconciliation again. Toggle callbacks
-still validate fresh native state; newly opened dialogs may offer their toggle
-only after the first logic reconciliation.
-Reaper requirement detection indexes copied sprites into vertical bands once per
-snapshot. Each task inspects nearby bands rather than every sprite in the picker.
-Overlapping malformed artwork and duplicate pieces still participate in validation;
-unusually large artwork uses a conservative fallback rather than being ignored.
-Both plugin-disabled and game-blocked rows allocate one unstyled input button and
-one canvas, without separate owned text labels or decorative sprite components.
-Enabled choices remain untouched. Canvas draw commands are populated only at
-creation; idle ticks do not redraw the static artwork or label. Exact 230 × 20
-rows use captured disabled sprites 18504–18512; other sizes use a flat background.
-Idle overlay geometry checks use local positions and dimensions; global positions
-are read only when positioning a hovered tooltip.
-Task menus only relayout or rewrite card state when preferences or dimensions
-change. Native ordering only sorts on ordering changes (or task toggles with
-enabled-first enabled); idle ticks validate named task labels, with full row
-validation retained before reordering. Shields follow moved rows in place,
-avoiding repeated destruction, allocation and movement-removal logs.
-Verified Slayer rows retain their canvas/shield while offscreen, relying on the
-native list viewport for clipping rather than recreating controls after scrolling.
-Overlay updates do not discard controls solely because the shield is clipped.
-Dialog closure, changed identities, hidden native targets and invalid layouts
-still remove protection. Native clipping and fast-scroll appearance need client
-verification; newly created native rows can still require the next logic tick.
-
-### Native requirement detection
-
-Task Guard covers game-blocked rows with matching static visuals when all nine native background
-sprites `18504–18512` match the captured row geometry. This visual-state heuristic
-was captured on The Magister and The Ghrazi Blood Knights; available Helwyr and
-Nex used `18468–18476` normally and `18477–18485` on hover. It is not a direct
-requirements API and needs in-client verification. Unknown, partial, restricted,
-ambiguous or differently scaled backgrounds retain normal overlay behaviour.
-These rows receive a transparent, input-enabled hover target with the popup
-**Blocked by requirements**, even when allowed in Task Guard. Native artwork is
-not modified; the same static canvas used for plugin blocks covers it. The target consumes clicks over the already game-blocked row
-without dispatching a task action; click-through targets did not reliably deliver
-hover events. Hover delivery still needs client verification. Saved preferences are unchanged:
-normal protection resumes if the native block disappears.
-Native sprites are captured during the existing choice-list traversal and reused
-for all task checks, avoiding a separate native list scan per disabled task.
-Run `lua tests/reaper-requirements.lua` for mocked detection coverage.
-
-## Project layout
-
-```text
-main.lua                   Plugin lifecycle and event handlers
-tasks/reaper/              Reaper catalogue and picker guard
-tasks/slayer/              Slayer catalogue, picker guard and ordering adapter
-constants.lua              Plugin identity and event prefix
-tasks/                     Shared task settings, ordering, requirements and picker constants
-ui/                        Settings view and owned mouse overlays
-tests/                     Isolated mocked regression suites
-scripts/test.ps1           Complete Lua 5.4 test runner
-scripts/package.ps1        Runtime-only, versioned release ZIP builder
-```
-
-## Planned behaviour
-
-Verify multi-task mouse overlays, Slayer picker compatibility across masters, full hitboxes and alternative input routes. Never automatically choose, accept, reroll or complete tasks. Leave unrelated interfaces and unknown choices unchanged. Do not modify the game's own block/prefer lists.
-
-## Feedback and collaboration
-
-Report bugs and suggestions to [vincent.rs.plugins@gmail.com](mailto:vincent.rs.plugins@gmail.com). Include reproduction steps and client version. Discuss substantial contributions before implementing them; avoid sharing personal information publicly.
-
-## Permissions and data protection
-
-This plugin requests no additional permissions. General ordering preferences, Reaper and Slayer toggles, and discovered Reaper names are saved locally through PersistentDB under `taskGuard.tasks.v1.displayName.<normalised-character-name>`. The logged-in character's display name is read to select a profile, ignoring case and surrounding spaces. Data is retained across reloads and client restarts; renaming starts a separate profile and old shared settings are not imported or deleted. Saving is blocked when character identity is unavailable. Enable all resets matching toggles in a tab's current search but does not delete discovered names. There is currently no in-plugin delete-data control; clearing the plugin's PersistentDB data through supported client facilities resets stored data. Uninstall deletion behaviour must be verified in-client.
-
-The plugin reads visible picker labels, component identity, restrictions, geometry and artwork to identify rows. It creates owned UI, moves validated native rows for sorting, and reports failures to the client console. It does not read chat or inventory, send data to the developer or external services, or dispatch native task actions. Data-protection case selection must be confirmed against the current Jagex requirements before submission.
-
-## Release preparation
-
-Run all mocked suites from the repository root with `powershell -File scripts/test.ps1` (Lua 5.4 required). Every suite runs in a separate process to isolate API mocks. Tests do not verify rendering, native action mapping, clipping, input interception or client persistence.
-
-Create the runtime ZIP with `powershell -File scripts/package.ps1`. It includes `main.lua`, `plugin.json`, `constants.lua` and the Lua modules in `tasks/` and `ui/`, retaining relative paths. Tests, editor files and maintainer documentation are excluded. The output is `dist/task-guard-<manifest-version>.zip`; existing releases are not overwritten.
-
-Follow [the submission checklist](../SUBMISSION.md) before publishing. Personally review every module and test in-client on the required platforms. Input/menu customisation is explicitly subject to Jagex review; this refactor is not a compliance certification. Confirm the monitored email, data-protection case and collaboration policy, prepare the listing image/screenshots, and copy the Email, Feedback and collaboration, Permissions, Data protection and EULA sections into the mod.io description. No approval or submission is claimed.
-
-### Email
-
-Contact: [vincent.rs.plugins@gmail.com](mailto:vincent.rs.plugins@gmail.com). Confirm this address is monitored before publishing.
+Before publishing, follow [SUBMISSION.md](../SUBMISSION.md) and Jagex's [plugin guidelines](https://developer.runescape.com/rs/submission/guidelines.html). Distribution requires Jagex moderation approval; this repository does not imply approval. Include the contact, collaboration, permissions, data protection and EULA sections in the mod.io description.
 
 ## EULA
 
