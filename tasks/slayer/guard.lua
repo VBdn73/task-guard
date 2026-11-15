@@ -307,7 +307,11 @@ function guard.new(rules, pretty)
             hover.finish()
         end,
         remove = clear,
-        shutdown = function() stopped = true; clear(); nativeOrder.restore() end,
+        shutdown = function()
+            stopped = true
+            clear()
+            nativeOrder.restore()
+        end,
     }
     return controller
 end

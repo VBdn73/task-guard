@@ -61,6 +61,10 @@ lua tests/slayer-catalogue.lua
 Mocks do not verify native rendering or click interception.
 
 Plugin shutdown destroys owned views and overlays and unsubscribes event handlers.
+Owned UI cleanup skips controls whose interface is unloaded, whose handle is
+restricted or whose parent has changed. View cleanup is idempotent and attempts
+each child cleanup independently before destroying the parent view. These checks
+reduce stale-handle risks but do not establish that client shutdown freezes are fixed.
 Closing the Reaper choice dialog clears its overlays on the next logic tick, while
 leaving the watcher active for reopening. Hidden plugin menus skip refresh work;
 failed/disposed views are cleaned up. Tooltip positions are refreshed only for

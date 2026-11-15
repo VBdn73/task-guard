@@ -3,25 +3,27 @@ local overlay = {}
 local requirements = require("tasks/requirements")
 local tooltipFactory = require("ui/task-tooltip")
 local constants = require("tasks/picker-constants")
+local cleanup = require("ui/cleanup")
 local MAX_TOOLTIP_ANCESTORS = 16
 local TOOLTIP_GAP = 6
 local activeTooltip
 
-local function destroyComponent(component, errors)
-    if not component then return end
-    local ok, err = pcall(function() component:Destroy() end)
+local function destroyComponent(destroy, errors)
+    if not destroy then return end
+    local ok, err = pcall(destroy)
     if not ok then errors[#errors + 1] = tostring(err) end
 end
 
 function overlay.new(config, prettyUILibrary)
     local name = assert(config.name, "Task name is required")
+    local destroyShield, destroyBackground
     local shield, background, tooltip, target, parent, refreshTooltipPosition, activateTooltip
     local localX, localY, width, height
     local hovering = false
     local function remove()
-        local old = shield
-        local oldBackground = background
         local oldTooltip = tooltip
+        local oldShieldCleanup, oldBackgroundCleanup = destroyShield, destroyBackground
+        destroyShield, destroyBackground = nil, nil
         if activeTooltip == oldTooltip then activeTooltip = nil end
         shield, target, parent = nil, nil, nil
         background = nil
@@ -30,9 +32,9 @@ function overlay.new(config, prettyUILibrary)
         activateTooltip = nil
         hovering = false
         local errors = {}
-        destroyComponent(oldTooltip, errors)
-        destroyComponent(old, errors)
-        destroyComponent(oldBackground, errors)
+        destroyComponent(oldTooltip and function() oldTooltip:Destroy() end, errors)
+        destroyComponent(oldShieldCleanup, errors)
+        destroyComponent(oldBackgroundCleanup, errors)
         if #errors > 0 then return "Overlay cleanup failed: " .. table.concat(errors, "; ") .. ". Close/reopen the choice dialog." end
         return "Overlay removed."
     end
@@ -69,6 +71,7 @@ function overlay.new(config, prettyUILibrary)
                 -- components, so text cannot become a separate native hit target.
                 do
                     background = ui.Canvas.new(parent)
+                    destroyBackground = cleanup.owned(background)
                     requirements.markOwned(background)
                     background:SetPos(target.x, target.y)
                     background:SetSize(target.width, target.height)
@@ -92,6 +95,7 @@ function overlay.new(config, prettyUILibrary)
                     background:MoveToFront()
                 end
                 shield = ui.Button.new(parent)
+                destroyShield = cleanup.owned(shield)
                 requirements.markOwned(shield)
                 -- Match the verified label rectangle, not guessed padding into nearby choices.
                 shield:SetPos(target.x, target.y)

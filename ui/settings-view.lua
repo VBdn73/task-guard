@@ -3,6 +3,7 @@ local slayerTasks = require("tasks/slayer/catalogue")
 local settings = require("tasks/settings")
 local taskOrder = require("tasks/ordering")
 local textWrap = require("ui/text-wrap")
+local cleanup = require("ui/cleanup")
 local MINIMUM_CARD_WIDTH = 246
 local SCROLL_STEP = 32
 local ENABLED_COLOR = 0x23412DE8
@@ -20,6 +21,7 @@ function view.build(host, rules, pretty, columns, showGeneral, state)
     local tabs = pretty.Tabs.new(host, tabDefinitions, { width = 0, height = 0, widthAnchor = 1, heightAnchor = 1,
         contentLayout = { startY = 80 }, activeIndex = state.activeIndex or 1,
         onChange = function(_, index) state.activeIndex = index end })
+    local tabsValid = cleanup.capture(tabs.root or host)
     local shortNames = { General = "Gen", Reaper = "Reap", Slayer = "Slay" }
     local function measureTabText(text)
         local ok, measured = pcall(function()
@@ -279,6 +281,7 @@ function view.build(host, rules, pretty, columns, showGeneral, state)
     local updateGeneral
     local dropdown
     local enabledCheckbox
+    local dropdownValid, checkboxValid
     if showGeneral then
     local function generalControl(kind, x, y, w, h)
         local control = ui[kind].new(generalPage.content)
@@ -304,11 +307,13 @@ function view.build(host, rules, pretty, columns, showGeneral, state)
         selectedID = orderIDs[rules.general.taskOrder] or 1,
     })
     generalControls[#generalControls + 1] = dropdown.root
+    dropdownValid = cleanup.capture(dropdown.root)
     assert(pretty.CheckboxButton and pretty.CheckboxButton.new, "PrettyUI CheckboxButton is required")
     enabledCheckbox = pretty.CheckboxButton.new(generalPage.content, {
         { text = "Sort enabled tasks first", value = "enabledFirst", selected = rules.general.enabledFirst },
     }, { x = 10, y = 50, width = 360 })
     enabledCheckbox.items[1].label.font = id.Font.MUSEO_SANS_11PT_REGULAR
+    checkboxValid = cleanup.capture(enabledCheckbox.root)
     generalControls[#generalControls + 1] = enabledCheckbox.root
     local information = generalControl("Text", 10, 96, 360, 100)
     information.font, information.clickthrough = id.Font.MUSEO_SANS_11PT_REGULAR, true
@@ -358,7 +363,9 @@ function view.build(host, rules, pretty, columns, showGeneral, state)
     updateGeneral()
     end
     local width, height, active
+    local disposed = false
     local function refresh()
+        if disposed then return end
         assert(not host.isRestricted, "Settings host is no longer available")
         if host.visibleGlobal == false then return end
         local selected = tabs:GetActiveIndex()
@@ -378,9 +385,20 @@ function view.build(host, rules, pretty, columns, showGeneral, state)
     end
     refresh()
     return refresh, function()
-        if dropdown then dropdown:Destroy() end
-        if enabledCheckbox then enabledCheckbox:Destroy() end
-        tabs:Destroy()
+        if disposed then return end
+        disposed = true
+        local oldDropdown, oldCheckbox = dropdown, enabledCheckbox
+        dropdown, enabledCheckbox = nil, nil
+        local errors = {}
+        local function destroy(control, valid)
+            if not control or not valid() then return end
+            local ok, err = pcall(function() control:Destroy() end)
+            if not ok then errors[#errors + 1] = tostring(err) end
+        end
+        destroy(oldDropdown, dropdownValid)
+        destroy(oldCheckbox, checkboxValid)
+        destroy(tabs, tabsValid)
+        if #errors > 0 then error(table.concat(errors, "; ")) end
     end
 end
 
