@@ -1,21 +1,43 @@
 # Changelog
 
-## Unreleased
+## 0.0.2 - 2026-11-15
 
-- Require Slayer toggles to have been presented by MiniMenuOpened before permitting a preference change. Hover/default-left-click menu builds stay inert. Add a regression for the reported Ascension members disable followed by an unintended Camel warriors enable.
-- Keep Slayer Enable/Disable menu entries below Cancel in priority, using Add's documented append index even with stale entry snapshots. A Cancel-only shielded row must never make Enable task its default left-click action. Add regression coverage for both live and snapshot entry lists.
-- Defer Slayer shield reconciliation until the normal logic tick after a picker-menu setting change. Menu callbacks now validate a read-only snapshot without creating/removing controls during click dispatch, addressing the captured Ascension members/Camel warriors double callback.
-- Make Slayer menu callbacks one-shot and invalidate actions retained from earlier menu builds, with two-task dispatch regression coverage. Add requirement mouse-repeat/native-hover detection while keeping tooltip allocation lazy.
-- Key Slayer rows by component address rather than raw Lua wrapper identity, while rechecking native identity and task name. Add fresh-wrapper regression coverage for retained shields and right-click callbacks. Move overlay text to disabled decoration so the enabled input catcher has no label to brighten on click.
-- Restore lazy requirement tooltips after reported lag: attach only the hovered row on a logic tick, not all rows at picker open. Bucket Slayer background snapshots by row to avoid full sprite scans for each task.
-- Retain Slayer shields on partially visible rows using native viewport clipping, pre-attach requirement tooltip hover hooks, and add right-click Enable/Disable task actions without replacing native default choices. Live clipping and hover delivery need retesting.
-- Add an experimental Slayer mouse guard for the captured shared Spria/Laniakea interface 201, using global settings, validated artwork/rows, conservative viewport clipping, duplicate Strigoi handling and independent lifecycle cleanup. Live click interception remains unverified.
-- Cross-check the global Slayer catalogue against all twelve wiki master tables, add missing tasks and migrate spelling variants while preserving disabled preferences. Record Laniakea's interface 201 capture and the known duplicate Strigoi bug.
-- Populate Slayer settings and ribbon tabs with the shared task-card menu, independent saved preferences, bulk toggles and general sorting. Existing Reaper preferences are preserved. Slayer native blocking is not implemented.
-- Retain manual Helwyr overlay controls with static visuals and input interception.
-- Remove interface discovery, parent dumps, native enabled-state probes and their configuration/tests from Task Guard.
-- Add `reapers-choice-findings.md` documenting captured IDs, user-reported results, limitations and the extension plan.
-- Keep mocked lifecycle/overlay regression tests. No automatic or complete task protection is claimed.
+### Added
+
+- Settings-driven mouse guards for recognised Reaper's Choice and Slayer task rows, with static grey artwork and hover explanations for plugin-disabled and game-blocked tasks.
+- Independent Reaper and Slayer preferences in settings and ribbon menus. All tasks are allowed by default; supported picker rows offer right-click **Enable task / Disable task** actions.
+- Search and **Enable all / Disable all** controls that affect only the currently displayed tasks.
+- General settings for client-default, alphabetical ascending/descending and enabled-first ordering, applied to plugin menus and recognised native pickers. Alphabetical ordering ignores a leading “The”.
+- Per-character persistence for task preferences, ordering and discovered Reaper names, with automatic profile switching and saving only when character identity is available.
+- A bundled Slayer catalogue covering all masters, including missing assignments and separate Sanguine crawler/werewolf entries. Known duplicate Ravenous Strigoi rows share one preference.
+- Automatic local discovery of new, unique visible Reaper tasks, defaulting to allowed. Legacy task-name spelling migrations preserve disabled preferences.
+
+### Changed
+
+- Replaced the initial read-only panels and manual overlay experiments with shared General, Reaper and Slayer controls in both settings and ribbon menus.
+- Matched Reaper client-default ordering to the native picker; validated native rows move together for sorting and return to their original positions when sorting is disabled or the picker closes.
+- Improved responsive task columns, bulk-button sizing and narrow-window tabs. Resizing preserves the selected tab.
+- Reduced overlay lag and frame drops through static canvas rendering, lazy tooltips, cached row checks and fewer idle layout, sorting and UI updates.
+- Improved overlay tracking across scrolling and changing component wrappers, with conservative handling of unknown or incomplete layouts.
+- Refactored shared settings, ordering, requirement detection and picker logic into task and UI modules; expanded mocked regression coverage.
+- Simplified the README with current usage, limitations, contact details, permissions, local data handling and submission guidance.
+
+### Fixed
+
+- Unintended Slayer preference changes from stale or repeated menu callbacks; hover and default-left-click menu builds no longer toggle preferences.
+- Enable/Disable menu priority and reconciliation during click dispatch, preserving native default choices and keeping Cancel as the default on shielded rows.
+- Enabled tasks becoming unclickable, requirement-tooltip hover handling and Slayer picker ordering not following General settings.
+- Excessive overlay allocation and repeated rendering/position updates when many tasks are disabled.
+- Cleanup of owned views, overlays and event handlers on dialog closure, reload and shutdown, with stale-handle checks and independent cleanup attempts.
+
+### Removed
+
+- Interface discovery tools, parent dumps and native enabled-state probes from the plugin.
+
+### Limitations
+
+- Guards depend on recognised English picker layouts and mouse overlays; complete protection across all input routes is not guaranteed.
+- No automatic task actions or changes to the game's block/prefer lists. Jagex moderation approval is not implied.
 
 ## 0.0.1 - 2026-11-13
 
