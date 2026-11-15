@@ -54,14 +54,16 @@ function overlay.new(config, prettyUILibrary)
                 local pretty = prettyUILibrary or prettyui
                 assert(pretty and pretty.Tooltip and pretty.Tooltip.attach, "PrettyUI Tooltip is required")
                 parent, geometry = target.parent, bounds(target)
-                background = ui.Rectangle.new(parent)
-                background:SetPos(target.x, target.y)
-                background:SetSize(target.width, target.height)
-                background.fill = true
-                -- Strongly darken the background; redraw readable text above it.
-                background.rgba = 0x00000080
-                background.clickthrough = true
-                background:MoveToFront()
+                if not config.requirements then
+                    background = ui.Rectangle.new(parent)
+                    background:SetPos(target.x, target.y)
+                    background:SetSize(target.width, target.height)
+                    background.fill = true
+                    -- Strongly darken the background; redraw readable text above it.
+                    background.rgba = 0x00000080
+                    background.clickthrough = true
+                    background:MoveToFront()
+                end
                 shield = ui.Button.new(parent)
                 -- Match the verified label rectangle, not guessed padding into nearby choices.
                 shield:SetPos(target.x, target.y)
@@ -71,13 +73,14 @@ function overlay.new(config, prettyUILibrary)
                 shield.stylesheetID = -1
                 shield.text.font = target.font or id.Font.MUSEO_SANS_15PT_REGULAR
                 shield.text.rgba = 0xBDB8AEFF
-                shield.label = target.content
+                shield.label = config.requirements and "" or target.content
                 shield.enabled = true
-                shield.clickthrough = false
-                shield:Subscribe(ui.Hook.ONBUTTONPRESSED, function()
-                    print("[task-guard] Blocked mouse press on " .. name .. ".")
-                    return false
-                end)
+                shield.clickthrough = config.requirements == true
+                if not config.requirements then
+                    shield:Subscribe(ui.Hook.ONBUTTONPRESSED, function()
+                        return false
+                    end)
+                end
                 shield:MoveToFront()
                 -- Owned, click-through popup: never changes native task requirements.
                 -- Render outside the native scrolling list, which may clip owned children.
@@ -108,7 +111,7 @@ function overlay.new(config, prettyUILibrary)
                     end
                 end
                 tooltip = pretty.Tooltip.attach(shield, popupHost, {
-                    text = "Blocked by the Task Guard plugin",
+                    text = config.requirements and "Blocked by requirements" or "Blocked by Task Guard plugin",
                     placement = "above", constrainToParent = false,
                 })
                 -- Run after PrettyUI's own hover hook so its automatic placement
@@ -128,6 +131,7 @@ function overlay.new(config, prettyUILibrary)
                 tooltip:Hide()
             end)
             if not ok then return "Overlay failed: " .. tostring(err) .. " | " .. remove() end
+            if config.requirements then return "Requirements tooltip shown over " .. name .. "." end
             return "Overlay shown over " .. name .. " label bounds only. Edges, right-click and keyboard may bypass it."
         end,
         remove = remove,

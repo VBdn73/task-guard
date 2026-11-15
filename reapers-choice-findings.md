@@ -4,6 +4,17 @@
 
 ## Outcome
 
+### Native requirement background capture
+
+User captures distinguish available Helwyr/Nex backgrounds (`18468–18476`),
+their hover backgrounds (`18477–18485`), and game-blocked Magister/Blood Knights
+backgrounds (`18504–18512`). Label and parent input states were identical.
+`reaper-requirements.lua` now suppresses overlays only for a complete, unique,
+geometrically matching nine-piece disabled background in the same native list.
+Unknown states preserve overlay behaviour. This is a client-dependent visual
+heuristic, not a requirements API; live suppression testing remains outstanding.
+Temporary native-label and row diagnostic tooling has been removed.
+
 Live-client testing established a useful proof of concept: a plugin-owned overlay above the Helwyr entry intercepted the user's tested clicks without choosing the task. Removing the default button stylesheet and adding a static dark rectangle with grey text also worked in-client, without the overlay's default hover/press animation.
 
 This is not yet a complete guard implementation. No client build number was recorded. Coverage of the entire native hitbox, context menus, keyboard/controller inputs and lifecycle transitions has not been established. API access does not imply Jagex approval for distribution.

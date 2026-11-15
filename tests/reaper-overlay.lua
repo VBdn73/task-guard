@@ -54,7 +54,7 @@ assert(background.rgba == 0x00000080, "Blocked row must darken the background at
 assert(popup.hidden and popup.options.placement == "above")
 assert(popup.options.constrainToParent == false)
 assert(popup.options.x == 326 and popup.options.y == 544)
-assert(popup.options.text == "Blocked by the Task Guard plugin")
+assert(popup.options.text == "Blocked by Task Guard plugin")
 made.hooks[ui.Hook.ONMOUSEOVER]()
 assert(not popup.hidden)
 Mouse = { GetPosition = function() return { x = 440, y = 415 } end }
@@ -93,4 +93,17 @@ current = label
 label.content = "Another boss"
 assert(probe.show():find("failed", 1, true))
 assert(label.enabled == nil, "Must not mutate native enabled state")
+label.content = "Helwyr"
+background = nil
+local requirementProbe = require("reaper-overlay").new({ name = "Helwyr", requirements = true,
+    resolve = function() return label end })
+assert(requirementProbe.show():find("shown", 1, true))
+assert(made.clickthrough == true and made.label == "", "Requirements hover target must be transparent and click-through")
+assert(background == nil, "Preserve the native disabled background")
+assert(made.hooks[ui.Hook.ONBUTTONPRESSED] == nil, "Never intercept native clicks in tooltip-only mode")
+assert(popup.options.text == "Blocked by requirements")
+made.hooks[ui.Hook.ONMOUSEOVER]()
+assert(not popup.hidden)
+requirementProbe.remove()
+assert(made.dead and popup.dead)
 print("Task Guard overlay tests passed")

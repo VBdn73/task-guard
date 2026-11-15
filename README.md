@@ -44,6 +44,23 @@ lua tests/reaper-guard.lua
 
 Mocks do not verify native rendering or click interception.
 
+### Native requirement detection
+
+Task Guard preserves game-blocked row visuals when all nine native background
+sprites `18504–18512` match the captured row geometry. This visual-state heuristic
+was captured on The Magister and The Ghrazi Blood Knights; available Helwyr and
+Nex used `18468–18476` normally and `18477–18485` on hover. It is not a direct
+requirements API and needs in-client verification. Unknown, partial, restricted,
+ambiguous or differently scaled backgrounds retain normal overlay behaviour.
+These rows receive a transparent, click-through hover target with the popup
+**Blocked by requirements**, even when allowed in Task Guard. No additional
+dimming or plugin click interception is applied. Native click-through hover
+delivery still needs client verification. Saved preferences are unchanged:
+normal protection resumes if the native block disappears.
+Native sprites are captured during the existing choice-list traversal and reused
+for all task checks, avoiding a separate native list scan per disabled task.
+Run `lua tests/reaper-requirements.lua` for mocked detection coverage.
+
 ## Project layout
 
 ```text
