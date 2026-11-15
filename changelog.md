@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Cross-check the global Slayer catalogue against all twelve wiki master tables, add missing tasks and migrate spelling variants while preserving disabled preferences. Record Laniakea's interface 201 capture and the known duplicate Strigoi bug.
 - Populate Slayer settings and ribbon tabs with the shared task-card menu, independent saved preferences, bulk toggles and general sorting. Existing Reaper preferences are preserved. Slayer native blocking is not implemented.
 - Retain manual Helwyr overlay controls with static visuals and input interception.
 - Remove interface discovery, parent dumps, native enabled-state probes and their configuration/tests from Task Guard.

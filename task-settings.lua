@@ -35,12 +35,19 @@ function settings.load()
     local reaper = ok and type(saved) == "table" and saved.reaper or nil
     local general = ok and type(saved) == "table" and saved.general or nil
     local slayer = ok and type(saved) == "table" and saved.slayer or nil
+    -- Catalogue spelling migration only; no runtime fuzzy-name matching.
+    local oldSlayerNames = { ["Kalphite"] = "Kalphites", ["Kurask"] = "Kurasks",
+        ["Turoth"] = "Turoths", ["Zombies"] = "Zombie", ["Cave slimes"] = "Cave slime",
+        ["Profane scabarites"] = "Profane Scabarites", ["Ravenous strigoi"] = "Ravenous Strigoi" }
     local rules = { reaper = {}, slayer = {}, general = {
         taskOrder = validOrder(type(general) == "table" and general.taskOrder),
         enabledFirst = type(general) == "table" and general.enabledFirst == true or false,
     } }
     for _, name in ipairs(slayerTasks) do
-        rules.slayer[name] = not (type(slayer) == "table" and slayer[name] == false)
+        local oldName = oldSlayerNames[name]
+        rules.slayer[name] = not (type(slayer) == "table"
+            and (slayer[name] == false or (oldName and slayer[oldName] == false)))
+        if type(slayer) == "table" and oldName and slayer[oldName] ~= nil then migrated = true end
     end
     for _, name in ipairs(tasks) do
         -- Enabled means allowed. No unwanted tasks are configured by default.
