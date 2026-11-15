@@ -58,11 +58,10 @@ prettyui = { Tooltip = { attach = function(target, host, options)
     tooltipCount = tooltipCount + 1
     assert(target == made)
     assert(host == popupHost, "Popup must render outside the native choice list")
-    popup = { options = options,
+    popup = { options = options, width = 230, height = 60,
         Show = function(self) self.width, self.height = 230, 60; self.hidden = false end,
         Hide = function(self) self.hidden = true end,
         Destroy = function(self) assert(not self.dead); self.dead = true end }
-    target:Subscribe(ui.Hook.ONMOUSELEAVE, function() popup:Hide() end)
     return popup
 end } }
 ui.Rectangle = { new = function(host)
@@ -74,6 +73,10 @@ ui.Rectangle = { new = function(host)
     return rectangle
 end }
 ui.TextDataConfig = { new = function() return {} end }
+-- Isolate overlay lifecycle from the renderer, tested in task-tooltip.lua.
+package.loaded["ui/task-tooltip"] = { new = function(host, options)
+    return prettyui.Tooltip.attach(made, host, options)
+end }
 ui.Canvas = { new = function(host)
     local canvas = ui.Rectangle.new(host)
     canvas.commands = {}
@@ -151,6 +154,11 @@ probe.update()
 assert(not made.dead and made.x == 8 and made.y == 10 and background.x == 8 and background.y == 10,
     "Existing shield and background must follow a reordered task")
 assert(#buttons == count and tooltipCount == 1, "Reordering must not rebuild owned controls")
+made.visibleGlobal = false
+probe.update()
+assert(probe.isShown() and not made.dead and not background.dead,
+    "A clipped shield must remain allocated while its verified native row exists")
+made.visibleGlobal = true
 probe.remove()
 assert(made.dead and background.dead and popup.dead)
 probe.show()
@@ -207,8 +215,10 @@ slayerProbe.update()
 assert(not popup.hidden and popup.options.text:find("personal Slayer block list", 1, true),
     "Cursor fallback must show the Slayer explanation without native hover events")
 cursorHovered = false
+made.isMouseOver = true -- Native scroll can retain this flag without a leave hook.
 slayerProbe.update()
 assert(popup.hidden, "Cursor fallback must hide the popup after leaving the row")
+assert(not slayerProbe.isMouseOver(), "Stale hover must not make right-click targeting ambiguous")
 cursorHovered = true
 slayerProbe.update()
 assert(not popup.hidden and tooltipCount == 3, "Returning to the row must reuse and reopen its popup")

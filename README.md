@@ -64,7 +64,23 @@ leaving the watcher active for reopening. Hidden plugin menus skip refresh work;
 failed/disposed views are cleaned up. Tooltip positions are refreshed only for
 hovered rows, avoiding unnecessary positioning work when many tasks are disabled.
 Tooltips are allocated only on a row's first hover, rather than for every disabled
-task at picker-open. Owned overlay components are excluded from native discovery.
+task at picker-open. Each tooltip uses one canvas with static background, border
+and text draw commands, rather than PrettyUI's layer plus sprite/text children.
+Repeated hover ticks do not rewrite popup visibility or front ordering; positioning
+only writes when the row's rendered position changes.
+Owned overlay components are excluded from native discovery.
+Hover validation shares one pointer/scale snapshot per guard update or menu
+targeting pass, caches scroll offsets per parent and reuses each row's result.
+Caches are discarded afterward so native callbacks and the next tick see fresh
+pointer positions and scrolling.
+Normal MiniMenuReady events reuse the latest reconciled logic snapshot rather
+than running ordering/discovery and overlay reconciliation again. Toggle callbacks
+still validate fresh native state; newly opened dialogs may offer their toggle
+only after the first logic reconciliation.
+Reaper requirement detection indexes copied sprites into vertical bands once per
+snapshot. Each task inspects nearby bands rather than every sprite in the picker.
+Overlapping malformed artwork and duplicate pieces still participate in validation;
+unusually large artwork uses a conservative fallback rather than being ignored.
 Both plugin-disabled and game-blocked rows allocate one unstyled input button and
 one canvas, without separate owned text labels or decorative sprite components.
 Enabled choices remain untouched. Canvas draw commands are populated only at
@@ -77,6 +93,12 @@ change. Native ordering only sorts on ordering changes (or task toggles with
 enabled-first enabled); idle ticks validate named task labels, with full row
 validation retained before reordering. Shields follow moved rows in place,
 avoiding repeated destruction, allocation and movement-removal logs.
+Verified Slayer rows retain their canvas/shield while offscreen, relying on the
+native list viewport for clipping rather than recreating controls after scrolling.
+Overlay updates do not discard controls solely because the shield is clipped.
+Dialog closure, changed identities, hidden native targets and invalid layouts
+still remove protection. Native clipping and fast-scroll appearance need client
+verification; newly created native rows can still require the next logic tick.
 
 ### Native requirement detection
 

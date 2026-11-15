@@ -1,8 +1,10 @@
 -- Owned mouse shield. Never selects or modifies a native game action.
 local overlay = {}
 local requirements = require("tasks/requirements")
+local tooltipFactory = require("ui/task-tooltip")
 local MAX_TOOLTIP_ANCESTORS = 16
 local TOOLTIP_GAP = 6
+local activeTooltip
 
 local function destroyComponent(component, errors)
     if not component then return end
@@ -19,6 +21,7 @@ function overlay.new(config, prettyUILibrary)
         local old = shield
         local oldBackground = background
         local oldTooltip = tooltip
+        if activeTooltip == oldTooltip then activeTooltip = nil end
         shield, target, parent = nil, nil, nil
         background = nil
         tooltip = nil
@@ -47,13 +50,18 @@ function overlay.new(config, prettyUILibrary)
     end
     return {
         isShown = function() return shield ~= nil end,
-        isMouseOver = function() return shield ~= nil and (hovering or shield.isMouseOver == true) end,
+        isMouseOver = function()
+            if not shield then return false end
+            if config.isHovered then
+                local current = config.isHovered()
+                if current ~= nil then return current end
+            end
+            return hovering or shield.isMouseOver == true
+        end,
         show = function()
             if shield then return "Overlay already present." end
             local ok, err = pcall(function()
                 target = resolve()
-                local pretty = prettyUILibrary or prettyui
-                assert(pretty and pretty.Tooltip and pretty.Tooltip.attach, "PrettyUI Tooltip is required")
                 parent = target.parent
                 localX, localY, width, height = target.x, target.y, target.width, target.height
                 -- One canvas replaces the tint: draw commands are not dynamic
@@ -131,8 +139,8 @@ function overlay.new(config, prettyUILibrary)
                         if tooltip.root then tooltip.root:SetPos(x, y) end
                     end
                 end
-                -- Most rows are never hovered. Do not allocate a PrettyUI popup
-                -- and its hover hooks for every disabled task at picker-open.
+                -- Most rows are never hovered. Allocate a single-canvas popup
+                -- only on first hover, with no additional target hooks.
                 refreshTooltipPosition = positionTooltip
                 local hover
                 local function leave()
@@ -142,29 +150,24 @@ function overlay.new(config, prettyUILibrary)
                 end
                 local function ensureTooltip()
                     if not tooltip then
-                        tooltip = pretty.Tooltip.attach(shield, popupHost, {
+                        tooltip = tooltipFactory.new(popupHost, {
                             text = config.tooltipText or (config.requirements and "Blocked by requirements" or "Blocked by Task Guard plugin"),
                             placement = "above", constrainToParent = false,
                         })
-                        -- Keep our placement after PrettyUI's automatic hover
-                        -- placement on subsequent entries as well.
-                        shield:Subscribe(ui.Hook.ONMOUSEOVER, "taskGuard.tooltipPosition", hover)
-                        shield:Subscribe(ui.Hook.ONMOUSELEAVE, "taskGuard.tooltipLeave", leave)
                     end
                 end
                 hover = function()
                     if not shield then return true end
+                    if config.isHovered and config.isHovered() == false then return leave() end
                     hovering = true
-                    -- Attach requirement hooks outside the native hover dispatch,
-                    -- lazily on the next logic tick, not for every row at open.
+                    -- Defer requirement popup creation to the next logic tick.
                     if config.requirements and not tooltip then return true end
                     ensureTooltip()
                     if tooltip then
-                        tooltip:Show()
+                        if activeTooltip and activeTooltip ~= tooltip then activeTooltip:Hide() end
+                        activeTooltip = tooltip
                         positionTooltip()
-                        if tooltip.root then
-                            tooltip.root:SetPos(tooltip.options.x, tooltip.options.y)
-                        end
+                        tooltip:Show()
                     end
                     return true
                 end
@@ -195,21 +198,25 @@ function overlay.new(config, prettyUILibrary)
                     if background then background:SetPos(c.x, c.y) end
                     localX, localY = c.x, c.y
                 end
-                if config.isHovered and shield.visibleGlobal then
+                if config.isHovered then
                     local cursorHover = config.isHovered()
-                    if cursorHover or (cursorHover == nil and hovering) or shield.isMouseOver or target.isMouseOver then
+                    if cursorHover == true or (cursorHover == nil
+                        and (hovering or shield.isMouseOver or target.isMouseOver)) then
                         activateTooltip()
                     elseif cursorHover == false then
                         hovering = false
                         if tooltip then tooltip:Hide() end
                     end
                 end
-                return shield.visibleGlobal
+                -- Do not remove a verified row's controls just because native
+                -- scrolling clips the shield. Resolve still validates the target
+                -- and guards remove stale rows when the dialog/layout changes.
+                return true
             end)
             if not ok or not valid then
                 remove()
-            elseif refreshTooltipPosition and (hovering or shield.isMouseOver
-                or (config.requirements and target.isMouseOver)) then
+            elseif refreshTooltipPosition and (hovering or (not config.isHovered and shield.isMouseOver)
+                or (not config.isHovered and config.requirements and target.isMouseOver)) then
                 local positioned, err = pcall(refreshTooltipPosition)
                 if positioned and not tooltip and activateTooltip then
                     positioned, err = pcall(activateTooltip)

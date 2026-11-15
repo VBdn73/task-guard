@@ -25,6 +25,30 @@ for _, c in ipairs(choices) do requirements.capture(c, parent, snapshot) end
 local iterate = parent.IterateDynamicComponents
 parent.IterateDynamicComponents = function() error("Unexpected repeated native traversal") end
 assert(requirements.isBlocked(label, snapshot), "Snapshot checks must not traverse native UI")
+assert(requirements.isBlocked(label, requirements.index(snapshot)(label)))
+local largeSnapshot = {}
+for _, sprite in ipairs(snapshot) do largeSnapshot[#largeSnapshot + 1] = sprite end
+for row = 1, 100 do
+    for _, sprite in ipairs(snapshot) do
+        local copy = {}
+        for key, value in pairs(sprite) do copy[key] = value end
+        copy.y = copy.y + row * 23
+        largeSnapshot[#largeSnapshot + 1] = copy
+    end
+end
+local indexed = requirements.index(largeSnapshot)(label)
+assert(#indexed < 40 and requirements.isBlocked(label, indexed),
+    "A task must inspect nearby artwork rather than the entire picker")
+snapshot[#snapshot + 1] = snapshot[1]
+assert(not requirements.isBlocked(label, requirements.index(snapshot)(label)),
+    "Repeated snapshot entries must still reject ambiguous disabled artwork")
+snapshot[#snapshot] = nil
+local malformed = { parent = parent, visibleGlobal = true, type = 3,
+    spriteID = 99999, x = label.x, y = label.y - 10000, width = 230, height = 20000 }
+snapshot[#snapshot + 1] = malformed
+assert(not requirements.isBlocked(label, requirements.index(snapshot)(label)),
+    "Large malformed sprites crossing many bands must remain in validation")
+snapshot[#snapshot] = nil
 parent.IterateDynamicComponents = iterate
 choices[9] = nil
 assert(not requirements.isBlocked(label), "Partial row is not proof")

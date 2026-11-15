@@ -34,6 +34,8 @@ local guard = require("tasks/reaper/guard").new(rules)
 guard.update()
 assert(created.Helwyr.isShown() and created.Nex.isShown())
 assert(traversals == 1, "All disabled-task checks must share one native list traversal")
+for _ = 1, 100 do guard.addMenu({ entries = {} }, true) end
+assert(traversals == 1, "Hover menu builds must reuse the logic snapshot without native traversal")
 assert(rules.reaper["Unknown task"] == true, "New native tasks default to allowed")
 rules.reaper["Unknown task"] = false
 guard.update()

@@ -5,6 +5,7 @@ local requirements = require("tasks/requirements")
 local tasks = require("tasks/slayer/catalogue")
 local settings = require("tasks/settings")
 local ordering = require("tasks/slayer/order")
+local hover = require("ui/task-hover")
 local guard = {}
 local spriteXs, spriteYs = { 0, 8, 222 }, { 0, 8, 12 }
 local spriteWidths, spriteHeights = { 8, 214, 8 }, { 8, 4, 8 }
@@ -57,24 +58,6 @@ function guard.new(rules, pretty)
             end
         end
         return count == 9
-    end
-    local function inside(c, viewport)
-        -- Native scroll offsets are not necessarily included in xyGlobal.
-        local x, y = c.xyGlobal.x, c.xyGlobal.y
-        local ancestor = c.parent
-        for _ = 1, 16 do
-            if not available(ancestor) then return false end
-            x, y = x - (ancestor.scrollX or 0), y - (ancestor.scrollY or 0)
-            if ancestor == viewport then
-                local origin = viewport.xyGlobal
-                -- Owned shields remain children of the native scrolling list,
-                -- so the viewport clips them exactly like the original row.
-                return x < origin.x + viewport.width and y < origin.y + viewport.height
-                    and x + c.width > origin.x and y + c.height > origin.y
-            end
-            ancestor = ancestor.parent
-        end
-        return false
     end
     local function discover()
         local title = ui.Interfaces:GetComponent(201, 7, 0, 14)
@@ -148,7 +131,8 @@ function guard.new(rules, pretty)
                 -- Only complete disabled artwork permits that missing label;
                 -- available rows and ambiguous duplicate companions stay strict.
                 and (companionCount == 1 or (blocked and companionCount == nil))
-                and inside(c, viewport)
+                -- Keep verified rows covered even outside the viewport. Native
+                -- list clipping controls rendering and pointer bounds control hover.
                 and validBackground(c, rowSprites) then
                 found[rowKey(c)] = { component = c, name = name,
                     companion = companionLabels[c.x .. ":" .. c.y],
@@ -172,26 +156,30 @@ function guard.new(rules, pretty)
                 end
             end
         end,
-        addMenu = function(menu)
+        addMenu = function(menu, useSnapshot)
             if stopped then return end
             -- Native dispatch may retain callbacks from previous menu builds.
             -- Only the most recently offered action is eligible to change rules.
             activeAction = nil
-            controller.update()
+            if not useSnapshot then controller.update() end
+            hover.begin()
             local selected, target, selectedKey
             for key, row in pairs(matches) do
                 local c = row.component
                 local entry = shields[key]
                 local hovered = c.isMouseOver or (entry and entry.shield.isMouseOver
                     and entry.shield.isMouseOver())
+                local cursorHover = hover.contains(c, row.viewport)
                 for _, action in ipairs(menu.entries) do
                     if action.componentData and action.componentData.component == c then hovered = true end
                 end
+                if cursorHover ~= nil then hovered = cursorHover end
                 if hovered then
-                    if selected then return end
+                    if selected then hover.finish(); return end
                     selected, target, selectedKey = row.name, c, key
                 end
             end
+            hover.finish()
             if not selected or matches[selectedKey].blocked then return end
             local enabled = rules.slayer[selected] ~= false
             local text = enabled and "Disable task" or "Enable task"
@@ -261,9 +249,11 @@ function guard.new(rules, pretty)
         end,
         update = function()
             if stopped then return end
+            hover.begin()
             nativeOrder.update()
             local ok, found = pcall(discover)
             if not ok then
+                hover.finish()
                 clear()
                 local message = tostring(found)
                 if message ~= lastError then print("[task-guard] Slayer protection unavailable: " .. message) end
@@ -284,34 +274,21 @@ function guard.new(rules, pretty)
                         entry = { component = row.component, name = name, blocked = row.blocked,
                             shield = factory.new({ name = name, requirements = row.blocked,
                                 tooltipText = row.blocked and "Blocked by in-game requirements or your personal Slayer block list" or nil,
-                                isHovered = row.blocked and function()
+                                isHovered = function()
                                     local current = matches[key]
                                     if not current then return false end
-                                    local c = current.component
-                                    if c.isMouseOver or (current.companion and current.companion.isMouseOver) then return true end
-                                    local ok, mouse = pcall(function() return Mouse.GetPosition() end)
-                                    if not ok or not mouse then return nil end
-                                    local scale = (game and game.options and game.options.InterfaceScale
-                                        and tonumber(game.options.InterfaceScale.setting) or 100) / 100
-                                    if scale <= 0 then scale = 1 end
-                                    local mouseX, mouseY = mouse.x / scale, mouse.y / scale
-                                    local x, y = c.xyGlobal.x, c.xyGlobal.y
-                                    local ancestor = c.parent
-                                    while ancestor do
-                                        x, y = x - (ancestor.scrollX or 0), y - (ancestor.scrollY or 0)
-                                        ancestor = ancestor.parent
-                                    end
-                                    local origin = viewport.xyGlobal
-                                    return mouseX >= x and mouseX < x + c.width
-                                        and mouseY >= y and mouseY < y + c.height
-                                        and mouseX >= origin.x and mouseX < origin.x + viewport.width
-                                        and mouseY >= origin.y and mouseY < origin.y + viewport.height
-                                end or nil,
+                                    local cursorHover = hover.contains(current.component, viewport)
+                                    if cursorHover ~= nil then return cursorHover end
+                                    if current.component.isMouseOver
+                                        or (current.companion and current.companion.isMouseOver) then return true end
+                                    return nil
+                                end,
                                 resolve = function()
                                     local current = matches[key]
                                     local c = current and current.component
                                     assert(c, "Slayer row unavailable")
-                                    assert(c.content == name and inside(c, viewport), "Slayer row changed or clipped")
+                                    assert(c.content == name and c.parent and c.parent.parent == viewport,
+                                        "Slayer row changed or detached")
                                     return c
                                 end }, pretty) }
                         shields[key] = entry
@@ -326,6 +303,7 @@ function guard.new(rules, pretty)
                     end
                 end
             end
+            hover.finish()
         end,
         remove = clear,
         shutdown = function() stopped = true; clear(); nativeOrder.restore() end,

@@ -145,7 +145,9 @@ game = nil
 Mouse.GetPosition = function() return { x = 0, y = 0 } end
 companion.children[#companion.children].isMouseOver = true
 controller.update()
-assert(blockedOptions.isHovered(), "The native companion label must also provide hover detection")
+assert(not blockedOptions.isHovered(), "Current cursor must override a stale native companion hover flag")
+Mouse = nil
+assert(blockedOptions.isHovered(), "Companion hover remains a fallback when the mouse API is unavailable")
 companion.children[#companion.children].isMouseOver = false
 Mouse = nil
 local blockedMenu = menu(list.children[#list.children - 9])
@@ -155,16 +157,16 @@ row("Unknown task", 8, 74)
 rules.slayer["Unknown task"] = false
 controller.update(); assert(made == 6)
 viewport.scrollY = 35
-controller.update(); assert(removed == 3, "Fully hidden rows lose shields; partially visible Strigoi rows keep theirs")
+controller.update(); assert(removed == 2, "Offscreen verified rows must retain shields during scrolling")
 viewport.scrollY = 0
-controller.update(); assert(made == 7)
+controller.update(); assert(made == 6, "Scrolling back must not allocate replacement shields")
 companion.width = 400
-controller.update(); assert(removed == 7, "Unknown layout must remove every shield")
+controller.update(); assert(removed == 6, "Unknown layout must remove every shield")
 companion.width = 480
 list.children[2].spriteID = 99999
-controller.update(); assert(made == 10, "Unknown row artwork must leave that row untouched")
+controller.update(); assert(made == 9, "Unknown row artwork must leave that row untouched")
 title.isRestricted = true
-controller.update(); assert(removed == 10)
+controller.update(); assert(removed == 9)
 title.isRestricted = false
 controller.update()
 controller.shutdown()

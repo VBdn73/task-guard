@@ -23,6 +23,46 @@ function requirements.capture(c, parent, sprites)
     end
 end
 
+-- Index copied artwork vertically once per native snapshot. Keep malformed
+-- overlapping pieces in the candidates: indexing must not weaken rejection.
+function requirements.index(sprites)
+    local bands, broad, cache = {}, {}, {}
+    for index, sprite in ipairs(sprites) do
+        local first = math.floor(sprite.y / 23)
+        local last = math.floor((sprite.y + sprite.height) / 23)
+        if last < first or last - first > 64 then
+            broad[#broad + 1] = index
+        else
+            for band = first, last do
+                bands[band] = bands[band] or {}
+                local entries = bands[band]
+                entries[#entries + 1] = index
+            end
+        end
+    end
+    return function(label)
+        local first = math.floor(label.y / 23)
+        local last = math.floor((label.y + label.height) / 23)
+        local key = first .. ":" .. last
+        if cache[key] then return cache[key] end
+        local found, seen = {}, {}
+        local function add(index)
+            -- The same copied sprite can span several bands. Distinct copies
+            -- at identical geometry remain distinct for ambiguity detection.
+            if not seen[index] then
+                seen[index] = true
+                found[#found + 1] = sprites[index]
+            end
+        end
+        for _, index in ipairs(broad) do add(index) end
+        for band = first, last do
+            for _, index in ipairs(bands[band] or {}) do add(index) end
+        end
+        cache[key] = found
+        return found
+    end
+end
+
 function requirements.isBlocked(label, sprites)
     local ok, blocked = pcall(function()
         local parent = label.parent

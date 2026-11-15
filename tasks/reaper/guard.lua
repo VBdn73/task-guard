@@ -4,6 +4,7 @@ local tasks = require("tasks/reaper/catalogue")
 local settings = require("tasks/settings")
 local requirements = require("tasks/requirements")
 local ordering = require("tasks/native-order")
+local hover = require("ui/task-hover")
 local guard = {}
 
 function guard.new(rules, pretty)
@@ -63,8 +64,12 @@ function guard.new(rules, pretty)
         end
         for name in pairs(duplicate) do found[name] = nil end
         -- Reuse the native snapshot: never traverse the list once per task.
+        local rowSprites = requirements.index(sprites)
         for name, c in pairs(found) do
-            if requirements.isBlocked(c, sprites) then blocked[name] = true end
+            -- Unknown label geometry is already rejected by requirements.
+            local candidates = sprites
+            if type(c.y) == "number" and type(c.height) == "number" then candidates = rowSprites(c) end
+            if requirements.isBlocked(c, candidates) then blocked[name] = true end
         end
         return found
     end
@@ -77,22 +82,28 @@ function guard.new(rules, pretty)
             clear()
             nativeOrder.restore()
         end,
-        addMenu = function(menu)
+        addMenu = function(menu, useSnapshot)
             if stopped then return end
-            -- Refresh native requirements and identities before offering an action.
-            controller.update()
+            -- MiniMenuReady runs for ordinary hover every tick. Main supplies
+            -- the reconciled logic snapshot; do not scan/create UI a second time.
+            -- Standalone callers can still request a fresh reconciliation.
+            if not useSnapshot then controller.update() end
+            hover.begin()
             local selected
             for name, c in pairs(matches) do
                 local hovered = c.isMouseOver or (shields[name] and shields[name].isMouseOver
                     and shields[name].isMouseOver())
+                local cursorHover = hover.contains(c, c.parent and c.parent.parent)
                 for _, entry in ipairs(menu.entries) do
                     if entry.componentData and entry.componentData.component == c then hovered = true end
                 end
+                if cursorHover ~= nil then hovered = cursorHover end
                 if hovered then
-                    if selected then return end
+                    if selected then hover.finish(); return end
                     selected = name
                 end
             end
+            hover.finish()
             if not selected or blocked[selected] then return end
             local target = matches[selected]
             local enabled = rules.reaper[selected] ~= false
@@ -157,9 +168,11 @@ function guard.new(rules, pretty)
         end,
         update = function()
             if stopped then return end
+            hover.begin()
             nativeOrder.update()
             local ok, result = pcall(discover)
             if not ok then
+                hover.finish()
                 clear()
                 local message = tostring(result)
                 if message ~= lastError then print("[task-guard] Reaper protection unavailable: " .. message) end
@@ -168,6 +181,7 @@ function guard.new(rules, pretty)
             end
             lastError, matches = nil, result
             if next(matches) == nil then
+                hover.finish()
                 clear()
                 return
             end
@@ -187,6 +201,11 @@ function guard.new(rules, pretty)
                     if not shield then
                         shield = factory.new({ name = matches[name].content,
                             requirements = blocked[name] == true,
+                            isHovered = function()
+                                local c = matches[name]
+                                if not c then return false end
+                                return hover.contains(c, c.parent and c.parent.parent)
+                            end,
                             resolve = function() return matches[name] end }, pretty)
                         shields[name] = shield
                         modes[name] = blocked[name] == true
@@ -203,6 +222,7 @@ function guard.new(rules, pretty)
                     end
                 end
             end
+            hover.finish()
         end,
     }
     return controller
