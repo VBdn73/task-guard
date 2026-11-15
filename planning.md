@@ -40,3 +40,5 @@ This is a development roadmap, not a promise of complete task blocking. The curr
 ## General
 
 - Add ordering by task name in the reapers choice and slayers choice menu
+- Right click option on a task to enable / disable it
+- Slayer picker options

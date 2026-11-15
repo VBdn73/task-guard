@@ -9,6 +9,7 @@ Task Guard is intended to help prevent unwanted Slayer cape choices and Reaper's
 - Reaper and Slayer settings tabs styled like Pre-flight Check, with two Reaper tasks per row, green enabled/red disabled backgrounds and checkboxes. Slayer is empty for now.
 - Saved Reaper preferences (enabled means allowed; all tasks are allowed by default). Disabled tasks receive automatic overlays when uniquely resolved in the captured Reaper choice list.
 - Ribbon task toggles using the same saved preferences, with responsive columns sized to fit the longest boss name and checkbox.
+- Side-by-side Enable all and Disable all buttons in the Reaper settings and ribbon menus. Changes are saved together.
 - Dynamic discovery of new, unique visible task labels in the validated Reaper choice list. Discovered tasks are saved locally, default to enabled, and appear in both menus automatically.
 - Task names are used directly for display, persistence and native matching, without runtime aliases. Legacy Telos/Black Stone Dragon/Giant Mole settings are migrated once, preserving disabled preferences. A future game-side rename is treated as a new enabled task.
 - Mouse shield with an opaque cover and the captured native disabled-row sprites (`18504–18512`), preventing native hover/press highlights from showing through without changing row bounds, plus a hover popup explaining that it is blocked by plugin settings rather than game requirements. The visual match needs in-client verification.

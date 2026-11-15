@@ -30,7 +30,7 @@ local function control(parent)
 end
 ui = { Hook = { ONBUTTONPRESSED = 1, ONSCROLLWHEEL = 2 }, AlignMode = { CENTRE = 1 } }
 for _, kind in ipairs({ "Layer", "Rectangle", "Text", "Check", "Button" }) do ui[kind] = { new = control } end
-id = { Font = { MUSEO_SANS_11PT_REGULAR = 1 }, StyleSheet = { CHECKBOX_DEFAULT = 1 } }
+id = { Font = { MUSEO_SANS_11PT_REGULAR = 1 }, StyleSheet = { CHECKBOX_DEFAULT = 1, BUTTON_DEFAULT = 2 } }
 local active, destroyed = 1, false
 local pretty = { Tabs = { new = function(_, defs)
     assert(#defs == 2 and defs[1].text == "Reaper" and defs[2].text == "Slayer")
@@ -40,7 +40,7 @@ local pretty = { Tabs = { new = function(_, defs)
         Destroy = function() destroyed = true end }
 end } }
 local refresh, destroy = require("settings-view").build({ width = 800, height = 600 }, rules, pretty)
-assert(#controls == #tasks * 6)
+assert(#controls == #tasks * 6 + 2)
 assert(controls[1].y == controls[7].y and controls[7].ax == 0.5)
 assert(controls[13].y == controls[1].y + 40)
 for _, c in ipairs(controls) do assert(c.parent ~= pages[2].content) end
@@ -50,11 +50,25 @@ switch.callbacks[1]()
 assert(not rules.reaper[tasks[1]] and not switch.value and background.rgba == 0x492626E8)
 assert(hitTarget.callbacks[1]() == false)
 assert(rules.reaper[tasks[1]] and switch.value and background.rgba == 0x23412DE8)
+local enableAll, allButton = controls[#controls - 1], controls[#controls]
+assert(enableAll.label == "Enable all" and enableAll.y == allButton.y)
+assert(enableAll.ax == 0 and allButton.ax == 0.5)
+assert(allButton.label == "Disable all")
+assert(allButton.callbacks[1]() == false)
+for _, name in ipairs(tasks) do assert(rules.reaper[name] == false) end
+assert(allButton.label == "Disable all" and not switch.value)
+assert(settings.load().reaper[tasks[1]] == false)
+enableAll.callbacks[1]()
+for _, name in ipairs(tasks) do assert(rules.reaper[name] == true) end
+assert(allButton.label == "Disable all" and switch.value)
 hitTarget.callbacks[1]()
 fail = true
+allButton.callbacks[1]()
+assert(not rules.reaper[tasks[1]] and rules.reaper[tasks[2]], "Failed bulk saves must restore mixed preferences")
+assert(allButton.label == "Disable all" and not switch.value)
 switch.callbacks[1]()
 assert(not switch.value and not rules.reaper[tasks[1]])
-active = 2; refresh(); assert(controls[1].hidden)
+active = 2; refresh(); assert(controls[1].hidden and allButton.hidden and enableAll.hidden)
 destroy(); assert(destroyed)
 controls = {}
 fail = false
@@ -65,6 +79,13 @@ refreshRibbon()
 assert(controls[6].value and controls[3].rgba == 0x23412DE8, "Views must reflect shared preferences")
 controls[4].callbacks[1]()
 assert(not controls[6].value and not rules.reaper[tasks[1]], "Ribbon cards must toggle too")
+local ribbonAll = controls[#controls]
+ribbonAll.callbacks[1]()
+for _, name in ipairs(tasks) do assert(rules.reaper[name] == false) end
+assert(ribbonAll.label == "Disable all")
+controls[#controls - 1].callbacks[1]()
+for _, name in ipairs(tasks) do assert(rules.reaper[name] == true) end
+assert(ribbonAll.label == "Disable all")
 destroyRibbon()
 local count = #tasks
 assert(settings.discover(rules, { "New Reaper Boss", "New Reaper Boss", "<invalid>" }))

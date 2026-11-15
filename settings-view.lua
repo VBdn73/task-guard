@@ -73,6 +73,30 @@ function view.build(host, rules, pretty, columns)
         update()
         entries[#entries + 1] = { layer = layer, update = update }
     end
+    local function setAll(enabled)
+        local old = {}
+        for _, name in ipairs(tasks) do
+            old[name] = rules.reaper[name]
+            rules.reaper[name] = enabled
+        end
+        if not settings.save(rules) then
+            for _, name in ipairs(tasks) do rules.reaper[name] = old[name] end
+            print("[task-guard] Could not save all task settings.")
+        end
+        for _, entry in ipairs(entries) do entry.update() end
+        return false
+    end
+    local allButtons = {}
+    for index, action in ipairs({ { label = "Enable all", enabled = true },
+        { label = "Disable all", enabled = false } }) do
+        local button = track(ui.Button.new(page.content))
+        button:SetPos(index == 1 and 10 or 4, 8, (index - 1) / 2, 0)
+        button:SetSize(-14, 30, 0.5, 0)
+        button.stylesheetID = id.StyleSheet.BUTTON_DEFAULT
+        button.label = action.label
+        button:Subscribe(ui.Hook.ONBUTTONPRESSED, function() return setAll(action.enabled) end)
+        allButtons[#allButtons + 1] = button
+    end
     local function layout()
         if automatic then
             local available = page._scroll.contentWidth or page.content.width
@@ -81,7 +105,7 @@ function view.build(host, rules, pretty, columns)
         end
         for index, entry in ipairs(entries) do
             local column = (index - 1) % columns
-            local y = 8 + math.floor((index - 1) / columns) * 40
+            local y = 48 + math.floor((index - 1) / columns) * 40
             if automatic then
                 entry.layer:SetPos(10 + column * 6 / columns, y, column / columns, 0)
                 entry.layer:SetSize(-6 - 14 / columns, 36, 1 / columns, 0)
@@ -90,7 +114,7 @@ function view.build(host, rules, pretty, columns)
                 entry.layer:SetSize(columns == 1 and -20 or -14, 36, 1 / columns, 0)
             end
         end
-        page:SetContentHeight(16 + math.ceil(#tasks / columns) * 40)
+        page:SetContentHeight(56 + math.ceil(#tasks / columns) * 40)
     end
     local width, height, contentWidth, active
     local function refresh()
@@ -98,6 +122,7 @@ function view.build(host, rules, pretty, columns)
         if selected ~= active then
             active = selected
             for _, entry in ipairs(entries) do entry.layer.hidden = active ~= 1 end
+            for _, button in ipairs(allButtons) do button.hidden = active ~= 1 end
         end
         for _, entry in ipairs(entries) do entry.update() end
         if host.width ~= width or host.height ~= height then
