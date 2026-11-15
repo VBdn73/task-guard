@@ -9,6 +9,7 @@ PersistentDB = {
 }
 local settings = require("task-settings")
 local tasks = require("reaper-tasks")
+local slayerTasks = require("slayer-tasks")
 assert(#tasks == 48 and tasks[1] == "Araxxi" and tasks[2] == "The Barrows Brothers")
 assert(tasks[23] == "Gregorovic" and tasks[24] == "Helwyr")
 assert(tasks[43] == "The Gate of Elidinis" and tasks[44] == "Amascut, the Devourer")
@@ -23,6 +24,11 @@ end
 rules.reaper.Helwyr = false
 assert(settings.save(rules))
 assert(settings.load().reaper.Helwyr == false)
+for _, name in ipairs(slayerTasks) do assert(rules.slayer[name]) end
+rules.slayer[slayerTasks[1]] = false
+assert(settings.save(rules))
+assert(settings.load().slayer[slayerTasks[1]] == false)
+assert(settings.load().reaper.Helwyr == false, "Slayer saves must preserve Reaper preferences")
 rules = settings.load()
 local controls, pages = {}, {}
 local function control(parent)
@@ -48,10 +54,27 @@ end } }
 pretty.ComboBox = dofile("tests/combo-box-mock.lua")(control)
 pretty.CheckboxButton = dofile("tests/checkbox-mock.lua")(control)
 local refresh, destroy = require("settings-view").build({ width = 800, height = 600 }, rules, pretty)
-assert(#controls == #tasks * 6 + 6)
+assert(#controls == (#tasks + #slayerTasks) * 6 + 8)
 assert(controls[1].y == controls[7].y and controls[7].ax == 0.5)
 assert(controls[13].y == controls[1].y + 40)
-for _, c in ipairs(controls) do assert(c.parent ~= pages[3].content) end
+local slayerStart = #tasks * 6 + 3
+assert(controls[slayerStart].parent == pages[3].content)
+local slayerSwitch = controls[slayerStart + 5]
+assert(not slayerSwitch.value)
+slayerSwitch.callbacks[1]()
+assert(rules.slayer[slayerTasks[1]] and settings.load().slayer[slayerTasks[1]])
+local slayerEnable = controls[slayerStart + #slayerTasks * 6]
+local slayerDisable = controls[slayerStart + #slayerTasks * 6 + 1]
+slayerDisable.callbacks[1]()
+for _, name in ipairs(slayerTasks) do assert(not rules.slayer[name]) end
+assert(rules.reaper[tasks[1]], "Slayer bulk actions must not change Reaper tasks")
+fail = true
+slayerEnable.callbacks[1]()
+for _, name in ipairs(slayerTasks) do assert(not rules.slayer[name]) end
+slayerSwitch.callbacks[1]()
+assert(not slayerSwitch.value and not rules.slayer[slayerTasks[1]], "Failed Slayer saves must roll back")
+fail = false
+slayerEnable.callbacks[1]()
 local background, switch, hitTarget = controls[3], controls[6], controls[4]
 assert(background.rgba == 0x23412DE8 and switch.value)
 switch.callbacks[1]()
@@ -74,7 +97,7 @@ fail = true
 allButton.callbacks[1]()
 assert(not rules.reaper[tasks[1]] and rules.reaper[tasks[2]], "Failed bulk saves must restore mixed preferences")
 assert(allButton.label == "Disable all" and not switch.value)
-local generalStart = #tasks * 6 + 3
+local generalStart = (#tasks + #slayerTasks) * 6 + 5
 local dropdown = controls[generalStart + 1]
 local enabledFirst = controls[generalStart + 2].checkbox
 local combo = dropdown.combo
@@ -118,6 +141,7 @@ fail = true
 switch.callbacks[1]()
 assert(not switch.value and not rules.reaper[tasks[1]])
 active = 3; refresh(); assert(controls[1].hidden and allButton.hidden and enableAll.hidden)
+assert(not controls[slayerStart].hidden and not slayerDisable.hidden)
 destroy(); assert(destroyed and combo.destroyed and enabledFirst.destroyed)
 controls = {}
 fail = false
@@ -153,6 +177,7 @@ assert(migrated.reaper.Telos == false and migrated.reaper["Black Stone Dragon"] 
     and migrated.reaper["Giant Mole"] == false)
 assert(migrated.reaper["Telos, the Warden"] == nil and migrated.reaper["Black stone dragon"] == nil)
 assert(saved.nameVersion == 2 and saved.reaper["Telos, the Warden"] == nil)
+assert(migrated.slayer[slayerTasks[1]], "Legacy saves must default Slayer tasks to enabled")
 for _, name in ipairs(tasks) do
     assert(name ~= "Telos, the Warden" and name ~= "Black stone dragon" and name ~= "Giant mole")
 end

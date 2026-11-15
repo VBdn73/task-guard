@@ -6,14 +6,15 @@ Task Guard is intended to help prevent unwanted Slayer cape choices and Reaper's
 
 ## Current features
 
-- General, Reaper and Slayer settings tabs styled like Pre-flight Check, with two Reaper tasks per row, green enabled/red disabled backgrounds and checkboxes. Slayer is empty for now.
+- General, Reaper and Slayer settings tabs styled like Pre-flight Check, with two tasks per row, green enabled/red disabled backgrounds and checkboxes. Both task tabs offer independent saved preferences and Enable all/Disable all buttons.
+- Slayer settings use a bundled assignment catalogue from the RuneScape Wiki, with all tasks enabled by default. These are settings only: Slayer cape choices are not yet blocked or reordered, and native names/order still need client capture. Client default currently uses the alphabetical catalogue order for Slayer. Both sets of preferences are saved locally through PersistentDB.
 - The plugin settings' General tab offers saved Client default/Alphabetical task ordering and an independent enabled-first toggle. The ribbon only shows Reaper and Slayer tabs, but uses the same ordering preferences. Both plugin task lists update immediately.
 - Client default in the plugin lists matches the native November 2026 picker sequence, read left-to-right across rows. Newly discovered tasks append to the catalogue. Saved enabled/disabled preferences are unchanged when the catalogue order changes.
 - Alphabetical ordering ignores a leading “The ” (e.g. The Ambassador sorts under A), while keeping the full displayed task names. This applies to settings, ribbon and native picker ordering.
 - Experimental native Reaper's Choice ordering uses those same preferences. Complete recognised rows (background sprites, named/empty labels and companion-list labels) move together without replacing task names or dispatching actions. Client default with enabled-first off restores original positions; shutdown and dialog closure attempt restoration too. Unknown or incomplete layouts are left untouched. Native action mapping, hover, scrolling and restoration still require in-client verification.
 - Saved Reaper preferences (enabled means allowed; all tasks are allowed by default). Disabled tasks receive automatic overlays when uniquely resolved in the captured Reaper choice list.
 - Ribbon task toggles using the same saved preferences, with responsive columns sized to fit the longest boss name and checkbox.
-- Side-by-side Enable all and Disable all buttons in the Reaper settings and ribbon menus. Changes are saved together.
+- Side-by-side Enable all and Disable all buttons in both task tabs in settings and ribbon menus. Each action changes only that tab's preferences; failed saves restore the previous state.
 - Dynamic discovery of new, unique visible task labels in the validated Reaper choice list. Discovered tasks are saved locally, default to enabled, and appear in both menus automatically.
 - Task names are used directly for display, persistence and native matching, without runtime aliases. Legacy Telos/Black Stone Dragon/Giant Mole settings are migrated once, preserving disabled preferences. A future game-side rename is treated as a new enabled task.
 - Mouse shield over a disabled, native-styled decorative button, plus a hover popup explaining that it is blocked by plugin settings rather than game requirements. The decoration uses the standard button stylesheet; matching the contextual picker artwork needs in-client verification. Nine separate disabled-row sprites are omitted to avoid the confirmed all-disabled picker lag.
@@ -98,7 +99,7 @@ changelog.md                Version history
 
 ## Planned behaviour
 
-Verify multi-task mouse overlays, full hitboxes and alternative input routes, and add a user-managed Slayer guard list. Never automatically choose, accept, reroll or complete tasks. Leave unrelated interfaces and unknown choices unchanged. Do not modify the game's own block/prefer lists.
+Verify multi-task mouse overlays, full hitboxes and alternative input routes, and integrate the saved Slayer preferences with a verified native Slayer picker adapter. Never automatically choose, accept, reroll or complete tasks. Leave unrelated interfaces and unknown choices unchanged. Do not modify the game's own block/prefer lists.
 
 ## Feedback and collaboration
 

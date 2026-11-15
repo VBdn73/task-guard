@@ -1,6 +1,7 @@
 -- Run from the project root: lua tests/settings-view.lua
 local tasks = { "Short", "Longest boss name", "Third", "Fourth", "Fifth", "Sixth" }
 package.loaded["reaper-tasks"] = tasks
+package.loaded["slayer-tasks"] = { "Slayer one", "Slayer two" }
 package.loaded["task-settings"] = { save = function() return true end }
 id = { Font = { MUSEO_SANS_11PT_REGULAR = 1 }, StyleSheet = { CHECKBOX_DEFAULT = 1, BUTTON_DEFAULT = 2 } }
 config = { Font = { FromID = function()
@@ -72,6 +73,8 @@ assert(layers[1].size[3] == 1 / 4, "Growing the ribbon should add columns again"
 active = 3
 refresh()
 assert(layers[1].hidden)
+assert(not layers[#tasks + 1].hidden and pages[3].contentHeight > 0,
+    "Slayer tab must show its own task cards")
 active = 2
 refresh()
 assert(not layers[1].hidden)

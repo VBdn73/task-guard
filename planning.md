@@ -41,3 +41,4 @@ This is a development roadmap, not a promise of complete task blocking. The curr
 
 - Have settings user name specific
 - Slayer picker options
+- Add search settings option

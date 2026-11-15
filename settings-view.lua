@@ -1,4 +1,5 @@
 local tasks = require("reaper-tasks")
+local slayerTasks = require("slayer-tasks")
 local settings = require("task-settings")
 local taskOrder = require("task-order")
 local view = {}
@@ -7,7 +8,15 @@ function view.build(host, rules, pretty, columns, showGeneral)
     showGeneral = showGeneral ~= false
     local reaperIndex = showGeneral and 2 or 1
     rules.general = rules.general or { taskOrder = "default", enabledFirst = false }
-    columns = columns or 2
+    assert(pretty and pretty.Tabs and pretty.Tabs.new, "PrettyUI Tabs is required")
+    local tabDefinitions = { { text = "Reaper" }, { text = "Slayer" } }
+    if showGeneral then table.insert(tabDefinitions, 1, { text = "General" }) end
+    local tabs = pretty.Tabs.new(host, tabDefinitions, { width = 0, height = 0, widthAnchor = 1, heightAnchor = 1,
+        contentLayout = { startY = 80 } })
+    local generalPage = showGeneral and tabs:GetPage(1) or nil
+    local function buildTaskPage(tasks, preferences, pageIndex)
+    local page = tabs:GetPage(pageIndex)
+    local columns = columns or 2
     local automatic = columns == "auto"
     local minimumCardWidth = 0
     if automatic then
@@ -18,20 +27,13 @@ function view.build(host, rules, pretty, columns, showGeneral)
         end
         columns = 1
     end
-    assert(pretty and pretty.Tabs and pretty.Tabs.new, "PrettyUI Tabs is required")
-    local tabDefinitions = { { text = "Reaper" }, { text = "Slayer" } }
-    if showGeneral then table.insert(tabDefinitions, 1, { text = "General" }) end
-    local tabs = pretty.Tabs.new(host, tabDefinitions, { width = 0, height = 0, widthAnchor = 1, heightAnchor = 1,
-        contentLayout = { startY = 80 } })
-    local generalPage = showGeneral and tabs:GetPage(1) or nil
-    local page = tabs:GetPage(reaperIndex)
     local entries = {}
     local layout
     local lastOrderKey
     local function orderKey()
         local parts = { rules.general.taskOrder, tostring(rules.general.enabledFirst) }
         if rules.general.enabledFirst then
-            for _, name in ipairs(tasks) do parts[#parts + 1] = rules.reaper[name] and "1" or "0" end
+            for _, name in ipairs(tasks) do parts[#parts + 1] = preferences[name] and "1" or "0" end
         end
         return table.concat(parts, ":")
     end
@@ -69,17 +71,17 @@ function view.build(host, rules, pretty, columns, showGeneral)
         switch.stylesheetID, switch.buttonSize = id.StyleSheet.CHECKBOX_DEFAULT, 22
         local lastEnabled
         local function update()
-            local enabled = rules.reaper[name]
+            local enabled = preferences[name]
             if enabled == lastEnabled then return end
             lastEnabled = enabled
             switch.value = enabled
             background.rgba = enabled and 0x23412DE8 or 0x492626E8
         end
         local function toggle()
-            local old = rules.reaper[name]
-            rules.reaper[name] = not old
+            local old = preferences[name]
+            preferences[name] = not old
             if not settings.save(rules) then
-                rules.reaper[name] = old
+                preferences[name] = old
                 print("[task-guard] Could not save " .. name .. " setting.")
             end
             update()
@@ -94,11 +96,11 @@ function view.build(host, rules, pretty, columns, showGeneral)
     local function setAll(enabled)
         local old = {}
         for _, name in ipairs(tasks) do
-            old[name] = rules.reaper[name]
-            rules.reaper[name] = enabled
+            old[name] = preferences[name]
+            preferences[name] = enabled
         end
         if not settings.save(rules) then
-            for _, name in ipairs(tasks) do rules.reaper[name] = old[name] end
+            for _, name in ipairs(tasks) do preferences[name] = old[name] end
             print("[task-guard] Could not save all task settings.")
         end
         for _, entry in ipairs(entries) do entry.update() end
@@ -118,8 +120,8 @@ function view.build(host, rules, pretty, columns, showGeneral)
     end
     layout = function()
         table.sort(entries, function(a, b)
-            if rules.general.enabledFirst and rules.reaper[a.name] ~= rules.reaper[b.name] then
-                return rules.reaper[a.name] == true
+            if rules.general.enabledFirst and preferences[a.name] ~= preferences[b.name] then
+                return preferences[a.name] == true
             end
             if rules.general.taskOrder == "alphabetical" then
                 return taskOrder.alphabetical(a.name, b.name)
@@ -147,6 +149,33 @@ function view.build(host, rules, pretty, columns, showGeneral)
         end
         page:SetContentHeight(56 + math.ceil(#tasks / columns) * 40)
         lastOrderKey = orderKey()
+    end
+    local contentWidth
+    return { layout = layout, refresh = function(active, resized)
+        for _, entry in ipairs(entries) do
+            entry.layer.hidden = active ~= pageIndex
+            entry.update()
+        end
+        for _, button in ipairs(allButtons) do button.hidden = active ~= pageIndex end
+        if resized or orderKey() ~= lastOrderKey then layout() end
+        local available = page._scroll.contentWidth or page.content.width
+        if available ~= contentWidth then
+            layout()
+            if (page._scroll.contentWidth or page.content.width) ~= available then layout() end
+            contentWidth = page._scroll.contentWidth or page.content.width
+        end
+    end }
+    end
+    rules.slayer = rules.slayer or {}
+    for _, name in ipairs(slayerTasks) do
+        if rules.slayer[name] == nil then rules.slayer[name] = true end
+    end
+    local taskPages = {
+        buildTaskPage(tasks, rules.reaper, reaperIndex),
+        buildTaskPage(slayerTasks, rules.slayer, reaperIndex + 1),
+    }
+    local function layout()
+        for _, taskPage in ipairs(taskPages) do taskPage.layout() end
     end
     local generalControls = {}
     local updateGeneral
@@ -207,32 +236,22 @@ function view.build(host, rules, pretty, columns, showGeneral)
     end
     generalPage:SetContentHeight(90)
     end
-    local width, height, contentWidth, active
+    local width, height, active
     local function refresh()
         assert(not host.isRestricted, "Settings host is no longer available")
         if host.visibleGlobal == false then return end
         local selected = tabs:GetActiveIndex()
         if selected ~= active then
             active = selected
-            for _, entry in ipairs(entries) do entry.layer.hidden = active ~= reaperIndex end
-            for _, button in ipairs(allButtons) do button.hidden = active ~= reaperIndex end
             for _, control in ipairs(generalControls) do control.hidden = active ~= 1 end
         end
         if showGeneral and active == 1 then updateGeneral() end
-        for _, entry in ipairs(entries) do entry.update() end
-        if orderKey() ~= lastOrderKey then layout() end
-        if host.width ~= width or host.height ~= height then
+        local resized = host.width ~= width or host.height ~= height
+        if resized then
             width, height = host.width, host.height
             for i = 1, #tabDefinitions do tabs:GetPage(i)._scroll:Refresh() end
-            layout()
         end
-        local available = page._scroll.contentWidth or page.content.width
-        if available ~= contentWidth then
-            layout()
-            -- Adding a scrollbar can reduce the width across a column threshold.
-            if (page._scroll.contentWidth or page.content.width) ~= available then layout() end
-            contentWidth = page._scroll.contentWidth or page.content.width
-        end
+        for _, taskPage in ipairs(taskPages) do taskPage.refresh(active, resized) end
     end
     refresh()
     return refresh, function()

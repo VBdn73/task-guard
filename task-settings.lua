@@ -1,4 +1,5 @@
 local tasks = require("reaper-tasks")
+local slayerTasks = require("slayer-tasks")
 local settings = {}
 local key = "taskGuard.tasks.v1"
 local function validOrder(value)
@@ -17,7 +18,7 @@ function settings.load()
         -- Legacy storage migration only. Runtime matching uses exact native names.
         local oldNames = { ["Telos, the Warden"] = "Telos",
             ["Black stone dragon"] = "Black Stone Dragon", ["Giant mole"] = "Giant Mole" }
-        local data = { reaper = {}, discovered = {}, general = saved.general }
+        local data = { reaper = {}, slayer = saved.slayer, discovered = {}, general = saved.general }
         if type(saved.reaper) == "table" then
             for name, value in pairs(saved.reaper) do
                 local native = oldNames[name] or name
@@ -33,10 +34,14 @@ function settings.load()
     end
     local reaper = ok and type(saved) == "table" and saved.reaper or nil
     local general = ok and type(saved) == "table" and saved.general or nil
-    local rules = { reaper = {}, general = {
+    local slayer = ok and type(saved) == "table" and saved.slayer or nil
+    local rules = { reaper = {}, slayer = {}, general = {
         taskOrder = validOrder(type(general) == "table" and general.taskOrder),
         enabledFirst = type(general) == "table" and general.enabledFirst == true or false,
     } }
+    for _, name in ipairs(slayerTasks) do
+        rules.slayer[name] = not (type(slayer) == "table" and slayer[name] == false)
+    end
     for _, name in ipairs(tasks) do
         -- Enabled means allowed. No unwanted tasks are configured by default.
         rules.reaper[name] = not (type(reaper) == "table" and reaper[name] == false)
@@ -60,11 +65,14 @@ end
 
 function settings.save(rules)
     local general = rules.general or {}
-    local data = { nameVersion = 2, reaper = {}, discovered = {}, general = {
+    local data = { nameVersion = 2, reaper = {}, slayer = {}, discovered = {}, general = {
         taskOrder = validOrder(general.taskOrder),
         enabledFirst = general.enabledFirst == true,
     } }
     for _, name in ipairs(tasks) do data.reaper[name] = rules.reaper[name] ~= false end
+    for _, name in ipairs(slayerTasks) do
+        data.slayer[name] = not rules.slayer or rules.slayer[name] ~= false
+    end
     -- Persist the complete catalogue so dynamically discovered names survive reloads.
     for _, name in ipairs(tasks) do data.discovered[#data.discovered + 1] = name end
     local ok, result = pcall(function() return PersistentDB:SetStructuredData(key, data) end)
