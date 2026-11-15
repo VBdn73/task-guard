@@ -240,10 +240,34 @@ function view.build(host, rules, pretty, columns, showGeneral)
     }, { x = 10, y = 50, width = 360 })
     enabledCheckbox.items[1].label.font = id.Font.MUSEO_SANS_11PT_REGULAR
     generalControls[#generalControls + 1] = enabledCheckbox.root
+    local information = generalControl("Text", 10, 96, 360, 100)
+    information.font, information.clickthrough = id.Font.MUSEO_SANS_11PT_REGULAR, true
+    local informationText = "Task Guard does not block tasks in-game or change which tasks you can receive. "
+        .. "It helps prevent accidental clicks on unwanted tasks in the Reaper's Choice and Slayer cape choice menus "
+        .. "and makes your preferred tasks easier to find."
+    local informationFont = config.Font.FromID(id.Font.MUSEO_SANS_11PT_REGULAR)
+    local informationWidth
     updateGeneral = function()
         local selectedID = orderIDs[rules.general.taskOrder] or 1
         if dropdown:GetSelectedID() ~= selectedID then dropdown:Select(selectedID, false) end
         enabledCheckbox:SetSelected("enabledFirst", rules.general.enabledFirst, false)
+        local available = math.max(100, (generalPage._scroll.contentWidth or generalPage.content.width) - 20)
+        if available ~= informationWidth then
+            informationWidth = available
+            local lines, line = {}, ""
+            for word in informationText:gmatch("%S+") do
+                local candidate = line == "" and word or line .. " " .. word
+                if line ~= "" and informationFont:GetStringWidth(candidate) > available then
+                    lines[#lines + 1], line = line, word
+                else
+                    line = candidate
+                end
+            end
+            lines[#lines + 1] = line
+            information.content = table.concat(lines, "<br>")
+            information:SetSize(available, #lines * 20)
+            generalPage:SetContentHeight(106 + #lines * 20)
+        end
     end
     local function saveGeneral(key, value)
         local old = rules.general[key]
@@ -262,7 +286,7 @@ function view.build(host, rules, pretty, columns, showGeneral)
     dropdown.onChange = function(_, entryID)
         return saveGeneral("taskOrder", orders[entryID] or "default")
     end
-    generalPage:SetContentHeight(90)
+    updateGeneral()
     end
     local width, height, active
     local function refresh()

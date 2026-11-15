@@ -55,6 +55,10 @@ local rules = { reaper = {} }
 for _, name in ipairs(tasks) do rules.reaper[name] = true end
 local view = require("settings-view")
 local refresh, destroy = view.build(host, rules, pretty, "auto")
+local information = labels[#labels]
+assert(information.content:find("does not block", 1, true), "General tab must explain that tasks are not blocked")
+assert(information.content:gsub("<br>", " "):find("accidental clicks", 1, true),
+    "General tab must explain accidental-click protection")
 assert(layers[1].size[3] == 1 / 3, "Wide ribbon should fit three columns")
 assert(layers[4].pos[2] == 88 and pages[2].contentHeight == 136)
 local writes = layers[1].positionWrites
