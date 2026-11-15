@@ -9,7 +9,7 @@ Task Guard is intended to help prevent unwanted Slayer cape choices and Reaper's
 - General, Reaper and Slayer settings tabs styled like Pre-flight Check, with two tasks per row, green enabled/red disabled backgrounds and checkboxes. Both task tabs offer independent saved preferences and Enable all/Disable all buttons.
 - Slayer settings use a bundled assignment catalogue from the RuneScape Wiki, with all tasks enabled by default. Client default currently uses the alphabetical catalogue order for Slayer. Both sets of preferences are saved locally through PersistentDB.
 - The global Slayer catalogue covers all masters, cross-checked against the wiki's twelve master assignment tables as well as its overview. It includes Sanguine crawlers and Sanguine werewolves as separate tasks. Captured Laniakea names take precedence over wiki spelling; older saved spelling variants are migrated without losing disabled preferences. One Ravenous strigoi setting covers the known duplicate picker entries. The catalogue is bundled, not fetched over the network at runtime.
-- Experimental Slayer mouse shields use interface 201 and the exact title `Select your Slayer task`, with the shared Spria/Laniakea list structure. Known 230 × 20 rows overlapping the viewport with matching companion labels and complete captured background artwork receive shields; native clipping is expected to constrain partially visible shields and needs client verification. Both Ravenous strigoi rows use the same preference; other duplicate names and unknown layouts are left untouched. Native disabled backgrounds receive transparent requirement targets with pre-attached hover tooltips and no additional dimming. Right-click Enable/Disable actions save the global preference while retaining the native default choice; game-blocked rows do not offer these actions. The native Slayer picker also applies General alphabetical and enabled-first sorting, moving complete rows and restoring original positions when sorting is off, the dialog closes or the plugin shuts down. Click interception, native action mapping after sorting, clipping/scroll offsets, hover delivery and other masters still need client testing.
+- Experimental Slayer mouse shields use interface 201 and the exact title `Select your Slayer task`, with the shared Spria/Laniakea list structure. Known 230 × 20 rows overlapping the viewport with matching companion labels and complete captured background artwork receive shields; native clipping is expected to constrain partially visible shields and needs client verification. Both Ravenous strigoi rows use the same preference; other duplicate names and unknown layouts are left untouched. Native disabled backgrounds receive requirement targets with lazy hover tooltips and the same static canvas as plugin-disabled rows. Right-click Enable/Disable actions save the global preference while retaining the native default choice; game-blocked rows do not offer these actions. The native Slayer picker also applies General alphabetical and enabled-first sorting, moving complete rows and restoring original positions when sorting is off, the dialog closes or the plugin shuts down. Click interception, native action mapping after sorting, clipping/scroll offsets, hover delivery and other masters still need client testing.
 - The plugin settings' General tab offers saved Client default/Alphabetical task ordering and an independent enabled-first toggle. The ribbon only shows Reaper and Slayer tabs, but uses the same ordering preferences. Both plugin task lists update immediately.
 - Client default in the plugin lists matches the native November 2026 picker sequence, read left-to-right across rows. Newly discovered tasks append to the catalogue. Saved enabled/disabled preferences are unchanged when the catalogue order changes.
 - Alphabetical ordering ignores a leading “The ” (e.g. The Ambassador sorts under A), while keeping the full displayed task names. This applies to settings, ribbon and native picker ordering.
@@ -20,7 +20,7 @@ Task Guard is intended to help prevent unwanted Slayer cape choices and Reaper's
 - Side-by-side Enable all and Disable all buttons in both task tabs in settings and ribbon menus. Each action changes only that tab's preferences; failed saves restore the previous state.
 - Dynamic discovery of new, unique visible task labels in the validated Reaper choice list. Discovered tasks are saved locally, default to enabled, and appear in both menus automatically.
 - Task names are used directly for display, persistence and native matching, without runtime aliases. Legacy Telos/Black Stone Dragon/Giant Mole settings are migrated once, preserving disabled preferences. A future game-side rename is treated as a new enabled task.
-- Mouse shield over a disabled, native-styled decorative button, plus a hover popup explaining that it is blocked by plugin settings rather than game requirements. The decoration uses the standard button stylesheet; matching the contextual picker artwork needs in-client verification. Nine separate disabled-row sprites are omitted to avoid the confirmed all-disabled picker lag.
+- Mouse shield over a static canvas for both plugin-disabled and requirement-disabled rows. The canvas covers underlying native animation, draws captured disabled artwork and a fixed-colour centered label. Its nine sprite draw commands and text are not separate UI components. An earlier opaque-background/separate-label experiment was withdrawn after client testing reported selectable plugin-disabled tasks. Canvas appearance, performance and interception require client verification; the input shield and total two-component-per-row count are retained.
 - Validation of the captured label's identity, visibility and bounds before creating the overlay.
 - Existing overlays follow movement of the same task row without rebuilding. Changed identity, parent or dimensions, and choice-dialog closure, remove them; shutdown independently cleans up each overlay. Retained menu callbacks cannot recreate overlays after shutdown.
 - PrettyUI hover tooltip; scoped enumeration of the captured choice list, without global scans, native enabled-state changes, automatic task actions or additional permissions.
@@ -65,6 +65,13 @@ failed/disposed views are cleaned up. Tooltip positions are refreshed only for
 hovered rows, avoiding unnecessary positioning work when many tasks are disabled.
 Tooltips are allocated only on a row's first hover, rather than for every disabled
 task at picker-open. Owned overlay components are excluded from native discovery.
+Both plugin-disabled and game-blocked rows allocate one unstyled input button and
+one canvas, without separate owned text labels or decorative sprite components.
+Enabled choices remain untouched. Canvas draw commands are populated only at
+creation; idle ticks do not redraw the static artwork or label. Exact 230 × 20
+rows use captured disabled sprites 18504–18512; other sizes use a flat background.
+Idle overlay geometry checks use local positions and dimensions; global positions
+are read only when positioning a hovered tooltip.
 Task menus only relayout or rewrite card state when preferences or dimensions
 change. Native ordering only sorts on ordering changes (or task toggles with
 enabled-first enabled); idle ticks validate named task labels, with full row
@@ -80,8 +87,8 @@ Nex used `18468–18476` normally and `18477–18485` on hover. It is not a dire
 requirements API and needs in-client verification. Unknown, partial, restricted,
 ambiguous or differently scaled backgrounds retain normal overlay behaviour.
 These rows receive a transparent, input-enabled hover target with the popup
-**Blocked by requirements**, even when allowed in Task Guard. No additional
-dimming is applied. The target consumes clicks over the already game-blocked row
+**Blocked by requirements**, even when allowed in Task Guard. Native artwork is
+not modified; the same static canvas used for plugin blocks covers it. The target consumes clicks over the already game-blocked row
 without dispatching a task action; click-through targets did not reliably deliver
 hover events. Hover delivery still needs client verification. Saved preferences are unchanged:
 normal protection resumes if the native block disappears.

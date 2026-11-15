@@ -1,7 +1,6 @@
 -- Owned mouse shield. Never selects or modifies a native game action.
 local overlay = {}
 local requirements = require("tasks/requirements")
-local DEFAULT_TEXT_COLOR = 0xBDB8AEFF
 local MAX_TOOLTIP_ANCESTORS = 16
 local TOOLTIP_GAP = 6
 
@@ -13,14 +12,14 @@ end
 
 function overlay.new(config, prettyUILibrary)
     local name = assert(config.name, "Task name is required")
-    local shield, background, tooltip, target, parent, geometry, refreshTooltipPosition, activateTooltip
+    local shield, background, tooltip, target, parent, refreshTooltipPosition, activateTooltip
     local localX, localY, width, height
     local hovering = false
     local function remove()
         local old = shield
         local oldBackground = background
         local oldTooltip = tooltip
-        shield, target, parent, geometry = nil, nil, nil, nil
+        shield, target, parent = nil, nil, nil
         background = nil
         tooltip = nil
         refreshTooltipPosition = nil
@@ -46,9 +45,6 @@ function overlay.new(config, prettyUILibrary)
         assert(c.width > 0 and c.height > 0, "Label has no usable bounds")
         return c
     end
-    local function bounds(c)
-        return table.concat({ c.x, c.y, c.width, c.height, c.xyGlobal.x, c.xyGlobal.y }, ":")
-    end
     return {
         isShown = function() return shield ~= nil end,
         isMouseOver = function() return shield ~= nil and (hovering or shield.isMouseOver == true) end,
@@ -58,19 +54,32 @@ function overlay.new(config, prettyUILibrary)
                 target = resolve()
                 local pretty = prettyUILibrary or prettyui
                 assert(pretty and pretty.Tooltip and pretty.Tooltip.attach, "PrettyUI Tooltip is required")
-                parent, geometry = target.parent, bounds(target)
+                parent = target.parent
                 localX, localY, width, height = target.x, target.y, target.width, target.height
-                if not config.requirements then
-                    background = ui.Button.new(parent)
+                -- One canvas replaces the tint: draw commands are not dynamic
+                -- components, so text cannot become a separate native hit target.
+                do
+                    background = ui.Canvas.new(parent)
                     requirements.markOwned(background)
                     background:SetPos(target.x, target.y)
                     background:SetSize(target.width, target.height)
-                    -- Let the native stylesheet render its disabled background
-                    -- in one component instead of nine separate sprite children.
-                    -- This is only decoration: the enabled shield owns input.
-                    background.stylesheetID = id.StyleSheet.BUTTON_DEFAULT
-                    background.label = ""
-                    background.enabled = false
+                    -- Cover the underlying enabled/hover/pressed appearance,
+                    -- including any transparent pixels in the disabled artwork.
+                    background:AddRectangle(0, 0, width, height, 0x201F1BFF)
+                    if width == 230 and height == 20 then
+                        local xs, ys = { 0, 8, 222 }, { 0, 8, 12 }
+                        local widths, heights = { 8, 214, 8 }, { 8, 4, 8 }
+                        for index = 0, 8 do
+                            local column, row = index % 3 + 1, math.floor(index / 3) + 1
+                            background:AddSprite(xs[column], ys[row], widths[column], heights[row],
+                                18504 + index, 0xFFFFFFFF)
+                        end
+                    end
+                    local text = ui.TextDataConfig.new()
+                    text.font = target.font or id.Font.MUSEO_SANS_15PT_REGULAR
+                    text.alignHorizontal, text.alignVertical = ui.AlignMode.CENTRE, ui.AlignMode.CENTRE
+                    text.colour = Vector4.new(0.74, 0.72, 0.68, 1)
+                    background:AddText(0, 0, width, height, name, text)
                     background.clickthrough = true
                     background:MoveToFront()
                 end
@@ -82,16 +91,9 @@ function overlay.new(config, prettyUILibrary)
                 -- No stylesheet/sprites: no hover or pressed-state visuals.
                 -- Keep inputs enabled to avoid risking click-through.
                 shield.stylesheetID = -1
-                shield.text.font = target.font or id.Font.MUSEO_SANS_15PT_REGULAR
-                shield.text.rgba = target.rgba or DEFAULT_TEXT_COLOR
                 -- Keep text off the enabled input catcher: native buttons can
                 -- brighten their label on press even with no stylesheet.
                 shield.label = ""
-                if background then
-                    background.text.font = target.font or id.Font.MUSEO_SANS_15PT_REGULAR
-                    background.text.rgba = target.rgba or DEFAULT_TEXT_COLOR
-                    background.label = target.content
-                end
                 shield.enabled = true
                 -- Click-through controls do not reliably receive native hover
                 -- hooks. Requirement-blocked rows need the same hit target, but
@@ -186,16 +188,12 @@ function overlay.new(config, prettyUILibrary)
             local ok, valid = pcall(function()
                 local c = resolve()
                 if c ~= target or c.parent ~= parent or c.width ~= width or c.height ~= height then return false end
-                local current = bounds(c)
-                if current ~= geometry then
+                if c.x ~= localX or c.y ~= localY then
                     -- Ordering/scrolling can move the same native row. Keep
                     -- its shield and tooltip rather than rebuilding them.
-                    if c.x ~= localX or c.y ~= localY then
-                        shield:SetPos(c.x, c.y)
-                        if background then background:SetPos(c.x, c.y) end
-                        localX, localY = c.x, c.y
-                    end
-                    geometry = current
+                    shield:SetPos(c.x, c.y)
+                    if background then background:SetPos(c.x, c.y) end
+                    localX, localY = c.x, c.y
                 end
                 if config.isHovered and shield.visibleGlobal then
                     local cursorHover = config.isHovered()
