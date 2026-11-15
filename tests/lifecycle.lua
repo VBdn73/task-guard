@@ -1,6 +1,7 @@
 -- Run from the project root: lua tests/lifecycle.lua
 local handlers = {}
 local created, destroyed = 0, 0
+local refreshFails = false
 
 local function event()
     local callbacks = {}
@@ -41,7 +42,7 @@ end
 ui.Button.new = ui.Text.new
 package.loaded["settings-view"] = { build = function(host)
     local control = ui.Text.new(host)
-    return function() end, function() control:Destroy() end
+    return function() assert(not refreshFails, "Disposed host") end, function() control:Destroy() end
 end }
 
 dofile("main.lua")
@@ -55,10 +56,27 @@ assert(created == 2 and destroyed == 0)
 handlers[1]["taskGuard.settings"]({ component = host })
 assert(created == 3 and destroyed == 1, "Reopening must clean up the old view")
 
+refreshFails = true
+handlers[3]["taskGuard.overlay"]()
+assert(destroyed == created, "Failed refreshes must destroy their views")
+refreshFails = false
+handlers[1]["taskGuard.settings"]({ component = host })
+handlers[2]["taskGuard.content"]({ component = host })
+
+PluginShutdown()
 PluginShutdown()
 assert(destroyed == created, "Shutdown must clean up all views")
 for _, callbacks in ipairs(handlers) do
     assert(next(callbacks) == nil, "Shutdown must unsubscribe all events")
+end
+
+for _ = 1, 3 do
+    dofile("main.lua")
+    handlers[1]["taskGuard.settings"]({ component = host })
+    handlers[2]["taskGuard.content"]({ component = host })
+    PluginShutdown()
+    assert(destroyed == created, "Repeated reloads must not retain views")
+    for _, callbacks in ipairs(handlers) do assert(next(callbacks) == nil) end
 end
 
 print("Task Guard lifecycle tests passed")

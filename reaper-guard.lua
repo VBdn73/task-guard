@@ -8,13 +8,15 @@ local guard = {}
 function guard.new(rules, pretty)
     local known, shields, matches, failures = {}, {}, {}, {}
     local blocked, modes = {}, {}
+    local stopped = false
     for _, name in ipairs(tasks) do known[name] = name end
     local function clear()
         matches, failures = {}, {}
         blocked, modes = {}, {}
         for name, shield in pairs(shields) do
-            shield.remove()
             shields[name] = nil
+            local ok, err = pcall(shield.remove)
+            if not ok then print("[task-guard] Could not remove " .. name .. " overlay: " .. tostring(err)) end
         end
     end
     local function discover()
@@ -29,6 +31,7 @@ function guard.new(rules, pretty)
         end
         -- Snapshot before creating owned components. Never match our own grey text.
         list:IterateDynamicComponents(function(c)
+            if c and requirements.isOwned(c) then return false end
             requirements.capture(c, list, sprites)
             if c and not c.isRestricted and c.visibleGlobal and c.parent == list
                 and c.type == ui.ComponentType.LABEL
@@ -67,7 +70,12 @@ function guard.new(rules, pretty)
     local controller
     controller = {
         remove = clear,
+        shutdown = function()
+            stopped = true
+            clear()
+        end,
         addMenu = function(menu)
+            if stopped then return end
             -- Refresh native requirements and identities before offering an action.
             controller.update()
             local selected
@@ -101,6 +109,7 @@ function guard.new(rules, pretty)
             -- MiniMenu dispatches callbacks with the action's user data. The
             -- default (zero) is shared by every action without an explicit ID.
             menu:Add(text, function(selectedID)
+                if stopped then return end
                 if selectedID ~= taskID then return end
                 controller.update()
                 -- A menu may outlive its dialog or the requirement state.
@@ -144,6 +153,7 @@ function guard.new(rules, pretty)
             end
         end,
         update = function()
+            if stopped then return end
             local ok, result = pcall(discover)
             if not ok then
                 clear()
@@ -153,6 +163,10 @@ function guard.new(rules, pretty)
                 return
             end
             lastError, matches = nil, result
+            if next(matches) == nil then
+                clear()
+                return
+            end
             for name, shield in pairs(shields) do
                 if not matches[name] or (rules.reaper[name] ~= false and not blocked[name])
                     or modes[name] ~= (blocked[name] == true) then

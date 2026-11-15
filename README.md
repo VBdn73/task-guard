@@ -12,9 +12,9 @@ Task Guard is intended to help prevent unwanted Slayer cape choices and Reaper's
 - Side-by-side Enable all and Disable all buttons in the Reaper settings and ribbon menus. Changes are saved together.
 - Dynamic discovery of new, unique visible task labels in the validated Reaper choice list. Discovered tasks are saved locally, default to enabled, and appear in both menus automatically.
 - Task names are used directly for display, persistence and native matching, without runtime aliases. Legacy Telos/Black Stone Dragon/Giant Mole settings are migrated once, preserving disabled preferences. A future game-side rename is treated as a new enabled task.
-- Mouse shield with an opaque cover and the captured native disabled-row sprites (`18504–18512`), preventing native hover/press highlights from showing through without changing row bounds, plus a hover popup explaining that it is blocked by plugin settings rather than game requirements. The visual match needs in-client verification.
+- Mouse shield over a disabled, native-styled decorative button, plus a hover popup explaining that it is blocked by plugin settings rather than game requirements. The decoration uses the standard button stylesheet; matching the contextual picker artwork needs in-client verification. Nine separate disabled-row sprites are omitted to avoid the confirmed all-disabled picker lag.
 - Validation of the captured label's identity, visibility and bounds before creating the overlay.
-- Removal on detected target movement/replacement, with shutdown cleanup attempts.
+- Removal on detected target movement/replacement or choice-dialog closure, with independent cleanup attempts for each overlay on shutdown. Retained menu callbacks cannot recreate overlays after shutdown.
 - PrettyUI hover tooltip; scoped enumeration of the captured choice list, without global scans, native enabled-state changes, automatic task actions or additional permissions.
 
 See **[reapers-choice-findings.md](reapers-choice-findings.md)** for the captured interface structure, evidence, limitations and steps needed to support other Reaper choices. See [planning.md](planning.md) for the broader roadmap.
@@ -46,6 +46,14 @@ lua tests/reaper-guard.lua
 
 Mocks do not verify native rendering or click interception.
 
+Plugin shutdown destroys owned views and overlays and unsubscribes event handlers.
+Closing the Reaper choice dialog clears its overlays on the next logic tick, while
+leaving the watcher active for reopening. Hidden plugin menus skip refresh work;
+failed/disposed views are cleaned up. Tooltip positions are refreshed only for
+hovered rows, avoiding unnecessary positioning work when many tasks are disabled.
+Tooltips are allocated only on a row's first hover, rather than for every disabled
+task at picker-open. Owned overlay components are excluded from native discovery.
+
 ### Native requirement detection
 
 Task Guard preserves game-blocked row visuals when all nine native background
@@ -54,10 +62,11 @@ was captured on The Magister and The Ghrazi Blood Knights; available Helwyr and
 Nex used `18468–18476` normally and `18477–18485` on hover. It is not a direct
 requirements API and needs in-client verification. Unknown, partial, restricted,
 ambiguous or differently scaled backgrounds retain normal overlay behaviour.
-These rows receive a transparent, click-through hover target with the popup
+These rows receive a transparent, input-enabled hover target with the popup
 **Blocked by requirements**, even when allowed in Task Guard. No additional
-dimming or plugin click interception is applied. Native click-through hover
-delivery still needs client verification. Saved preferences are unchanged:
+dimming is applied. The target consumes clicks over the already game-blocked row
+without dispatching a task action; click-through targets did not reliably deliver
+hover events. Hover delivery still needs client verification. Saved preferences are unchanged:
 normal protection resumes if the native block disappears.
 Native sprites are captured during the existing choice-list traversal and reused
 for all task checks, avoiding a separate native list scan per disabled task.

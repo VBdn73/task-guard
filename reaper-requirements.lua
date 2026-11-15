@@ -6,6 +6,10 @@ function requirements.markOwned(c)
     owned[c] = true
 end
 
+function requirements.isOwned(c)
+    return owned[c] == true
+end
+
 -- Copy native sprite properties once during the guard's existing list traversal.
 function requirements.capture(c, parent, sprites)
     if c and not owned[c] and c.type == 3 and not c.isRestricted and c.visibleGlobal and c.parent == parent then

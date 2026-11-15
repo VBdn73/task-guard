@@ -118,6 +118,8 @@ function view.build(host, rules, pretty, columns)
     end
     local width, height, contentWidth, active
     local function refresh()
+        assert(not host.isRestricted, "Settings host is no longer available")
+        if host.visibleGlobal == false then return end
         local selected = tabs:GetActiveIndex()
         if selected ~= active then
             active = selected

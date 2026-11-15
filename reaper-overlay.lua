@@ -5,7 +5,6 @@ local requirements = require("reaper-requirements")
 function overlay.new(config, prettyUILibrary)
     local name = config.name or "Helwyr"
     local shield, background, tooltip, target, parent, geometry, refreshTooltipPosition
-    local artwork = {}
     local function remove()
         local old = shield
         local oldBackground = background
@@ -15,11 +14,6 @@ function overlay.new(config, prettyUILibrary)
         tooltip = nil
         refreshTooltipPosition = nil
         local errors = {}
-        for _, sprite in ipairs(artwork) do
-            local ok, err = pcall(function() sprite:Destroy() end)
-            if not ok then errors[#errors + 1] = tostring(err) end
-        end
-        artwork = {}
         if oldTooltip then
             local ok, err = pcall(function() oldTooltip:Destroy() end)
             if not ok then errors[#errors + 1] = tostring(err) end
@@ -63,32 +57,21 @@ function overlay.new(config, prettyUILibrary)
                 assert(pretty and pretty.Tooltip and pretty.Tooltip.attach, "PrettyUI Tooltip is required")
                 parent, geometry = target.parent, bounds(target)
                 if not config.requirements then
-                    background = ui.Rectangle.new(parent)
+                    background = ui.Button.new(parent)
+                    requirements.markOwned(background)
                     background:SetPos(target.x, target.y)
                     background:SetSize(target.width, target.height)
-                    background.fill = true
-                    -- Fully cover native hover/press states, including transparent
-                    -- pixels in the disabled artwork. Never dim the live row.
-                    background.rgba = 0x181818FF
+                    -- Let the native stylesheet render its disabled background
+                    -- in one component instead of nine separate sprite children.
+                    -- This is only decoration: the enabled shield owns input.
+                    background.stylesheetID = id.StyleSheet.BUTTON_DEFAULT
+                    background.label = ""
+                    background.enabled = false
                     background.clickthrough = true
                     background:MoveToFront()
-                    assert(target.width >= 16 and target.height >= 16, "Row too small for disabled artwork")
-                    local xs, ys = { 0, 8, target.width - 8 }, { 0, 8, target.height - 8 }
-                    local widths, heights = { 8, target.width - 16, 8 }, { 8, target.height - 16, 8 }
-                    for index = 0, 8 do
-                        local column, row = index % 3 + 1, math.floor(index / 3) + 1
-                        local sprite = ui.Sprite.new(parent)
-                        artwork[#artwork + 1] = sprite
-                        requirements.markOwned(sprite)
-                        sprite.sprite = 18504 + index
-                        sprite:SetPos(target.x + xs[column], target.y + ys[row])
-                        sprite:SetSize(widths[column], heights[row])
-                        sprite.rgba = 0xFFFFFFFF
-                        sprite.clickthrough, sprite.enabled = true, false
-                        sprite:MoveToFront()
-                    end
                 end
                 shield = ui.Button.new(parent)
+                requirements.markOwned(shield)
                 -- Match the verified label rectangle, not guessed padding into nearby choices.
                 shield:SetPos(target.x, target.y)
                 shield:SetSize(target.width, target.height)
@@ -99,12 +82,13 @@ function overlay.new(config, prettyUILibrary)
                 shield.text.rgba = target.rgba or 0xBDB8AEFF
                 shield.label = config.requirements and "" or target.content
                 shield.enabled = true
-                shield.clickthrough = config.requirements == true
-                if not config.requirements then
-                    shield:Subscribe(ui.Hook.ONBUTTONPRESSED, function()
-                        return false
-                    end)
-                end
+                -- Click-through controls do not reliably receive native hover
+                -- hooks. Requirement-blocked rows need the same hit target, but
+                -- no decoration or text. Never dispatch a native task action.
+                shield.clickthrough = false
+                shield:Subscribe(ui.Hook.ONBUTTONPRESSED, function()
+                    return false
+                end)
                 shield:MoveToFront()
                 -- Owned, click-through popup: never changes native task requirements.
                 -- Render outside the native scrolling list, which may clip owned children.
@@ -134,25 +118,30 @@ function overlay.new(config, prettyUILibrary)
                         if tooltip.root then tooltip.root:SetPos(x, y) end
                     end
                 end
-                tooltip = pretty.Tooltip.attach(shield, popupHost, {
-                    text = config.requirements and "Blocked by requirements" or "Blocked by Task Guard plugin",
-                    placement = "above", constrainToParent = false,
-                })
-                -- Run after PrettyUI's own hover hook so its automatic placement
-                -- cannot overwrite our native-entry-relative position.
+                -- Most rows are never hovered. Do not allocate a PrettyUI popup
+                -- and its hover hooks for every disabled task at picker-open.
                 refreshTooltipPosition = positionTooltip
-                shield:Subscribe(ui.Hook.ONMOUSEOVER, "taskGuard.tooltipPosition", function()
+                local function hover()
+                    if not shield then return true end
+                    if not tooltip then
+                        tooltip = pretty.Tooltip.attach(shield, popupHost, {
+                            text = config.requirements and "Blocked by requirements" or "Blocked by Task Guard plugin",
+                            placement = "above", constrainToParent = false,
+                        })
+                        -- Keep our placement after PrettyUI's automatic hover
+                        -- placement on subsequent entries as well.
+                        shield:Subscribe(ui.Hook.ONMOUSEOVER, "taskGuard.tooltipPosition", hover)
+                    end
                     if tooltip then
-                        positionTooltip()
                         tooltip:Show()
+                        positionTooltip()
                         if tooltip.root then
                             tooltip.root:SetPos(tooltip.options.x, tooltip.options.y)
                         end
                     end
                     return true
-                end)
-                positionTooltip()
-                tooltip:Hide()
+                end
+                shield:Subscribe(ui.Hook.ONMOUSEOVER, "taskGuard.tooltipPosition", hover)
             end)
             if not ok then return "Overlay failed: " .. tostring(err) .. " | " .. remove() end
             if config.requirements then return "Requirements tooltip shown over " .. name .. "." end
@@ -167,7 +156,7 @@ function overlay.new(config, prettyUILibrary)
             end)
             if not ok or not valid then
                 print("[task-guard] Target changed or overlay unavailable. " .. remove())
-            elseif refreshTooltipPosition then
+            elseif refreshTooltipPosition and shield.isMouseOver then
                 local positioned, err = pcall(refreshTooltipPosition)
                 if not positioned then
                     print("[task-guard] Tooltip positioning failed: " .. tostring(err) .. " | " .. remove())

@@ -167,3 +167,27 @@ assert(rules.reaper[barrows.content] == false)
 assert(rules.reaper[chaos.content] == true, "Disabling Barrows must leave Chaos Elemental enabled")
 guard.remove()
 print("Task Guard independent menu dispatch tests passed")
+
+helwyr.isMouseOver = true
+choices = { helwyr, nex }
+rules.reaper.Helwyr, rules.reaper.Nex = false, false
+for _ = 1, 3 do
+    guard.update()
+    assert(created.Helwyr.isShown() and created.Nex.isShown())
+    list.visibleGlobal = false
+    guard.update()
+    assert(not created.Helwyr.isShown() and not created.Nex.isShown())
+    list.visibleGlobal = true
+end
+local stale = menu()
+guard.addMenu(stale)
+guard.shutdown()
+guard.shutdown()
+local before = traversals
+guard.update()
+stale.entries[2].callback()
+guard.addMenu(menu())
+assert(traversals == before, "Shutdown must disable retained callbacks and updates")
+assert(rules.reaper.Helwyr == false and not created.Helwyr.isShown())
+assert(not created.Nex.isShown())
+print("Task Guard dialog and shutdown cleanup tests passed")
