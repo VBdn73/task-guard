@@ -2,7 +2,8 @@ local tasks = require("reaper-tasks")
 local settings = require("task-settings")
 local view = {}
 
-function view.build(host, rules, pretty)
+function view.build(host, rules, pretty, columns)
+    columns = columns or 2
     assert(pretty and pretty.Tabs and pretty.Tabs.new, "PrettyUI Tabs is required")
     local tabs = pretty.Tabs.new(host, {
         { text = "Reaper" }, { text = "Slayer" },
@@ -20,11 +21,11 @@ function view.build(host, rules, pretty)
         return control
     end
     for index, name in ipairs(tasks) do
-        local column = (index - 1) % 2
-        local y = 8 + math.floor((index - 1) / 2) * 40
+        local column = (index - 1) % columns
+        local y = 8 + math.floor((index - 1) / columns) * 40
         local layer = track(ui.Layer.new(page.content))
-        layer:SetPos(column == 0 and 10 or 4, y, column * 0.5, 0)
-        layer:SetSize(-14, 36, 0.5, 0)
+        layer:SetPos(column == 0 and 10 or 4, y, column / columns, 0)
+        layer:SetSize(columns == 1 and -20 or -14, 36, 1 / columns, 0)
         layer.clickthrough = true
         local frame = track(ui.Rectangle.new(layer))
         frame:SetSize(0, 36, 1, 0)
@@ -56,16 +57,17 @@ function view.build(host, rules, pretty)
             return true
         end)
         update()
-        entries[#entries + 1] = layer
+        entries[#entries + 1] = { layer = layer, update = update }
     end
-    page:SetContentHeight(16 + math.ceil(#tasks / 2) * 40)
+    page:SetContentHeight(16 + math.ceil(#tasks / columns) * 40)
     local width, height, active
     local function refresh()
         local selected = tabs:GetActiveIndex()
         if selected ~= active then
             active = selected
-            for _, layer in ipairs(entries) do layer.hidden = active ~= 1 end
+            for _, entry in ipairs(entries) do entry.layer.hidden = active ~= 1 end
         end
+        for _, entry in ipairs(entries) do entry.update() end
         if host.width ~= width or host.height ~= height then
             width, height = host.width, host.height
             for i = 1, 2 do tabs:GetPage(i)._scroll:Refresh() end

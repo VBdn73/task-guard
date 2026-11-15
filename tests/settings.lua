@@ -53,4 +53,12 @@ switch.callbacks[1]()
 assert(not switch.value and not rules.reaper[tasks[1]])
 active = 2; refresh(); assert(controls[1].hidden)
 destroy(); assert(destroyed)
+controls = {}
+fail = false
+local refreshRibbon, destroyRibbon = require("settings-view").build({ width = 300, height = 600 }, rules, pretty, 1)
+assert(controls[6].y == controls[1].y + 40 and controls[6].ax == 0)
+rules.reaper[tasks[1]] = true
+refreshRibbon()
+assert(controls[5].value and controls[3].rgba == 0x23412DE8, "Views must reflect shared preferences")
+destroyRibbon()
 print("Task Guard settings tests passed")

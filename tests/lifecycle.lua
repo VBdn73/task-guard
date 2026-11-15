@@ -49,10 +49,10 @@ assert(type(PluginShutdown) == "function")
 local host = {}
 handlers[1]["taskGuard.settings"]({ component = host })
 handlers[2]["taskGuard.content"]({ component = host })
-assert(created == 4 and destroyed == 0)
+assert(created == 2 and destroyed == 0)
 
 handlers[1]["taskGuard.settings"]({ component = host })
-assert(created == 5 and destroyed == 1, "Reopening must clean up the old view")
+assert(created == 3 and destroyed == 1, "Reopening must clean up the old view")
 
 PluginShutdown()
 assert(destroyed == created, "Shutdown must clean up all views")

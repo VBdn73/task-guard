@@ -1,22 +1,22 @@
 local constants = require("constants")
-local statusView = require("status-view")
 local settingsView = require("settings-view")
 local rules = require("task-settings").load()
-local refreshSettings
+local refreshViews = {}
 local destroyViews = {}
 local overlay = require("reaper-overlay").new(require("reaper-config"), prettyui)
 Event.Logic.Subscribe(constants.EVENT_PREFIX .. ".overlay", function()
     overlay.update()
-    if refreshSettings then
-        local ok, err = pcall(refreshSettings)
+    for kind, refresh in pairs(refreshViews) do
+        local ok, err = pcall(refresh)
         if not ok then
-            refreshSettings = nil
-            print("[task-guard] Settings refresh failed: " .. tostring(err))
+            refreshViews[kind] = nil
+            print("[task-guard] " .. kind .. " refresh failed: " .. tostring(err))
         end
     end
 end)
 
 local function closeView(kind)
+    refreshViews[kind] = nil
     local destroy = destroyViews[kind]
     destroyViews[kind] = nil
     if destroy then
@@ -29,19 +29,10 @@ end
 
 local function openView(kind, host)
     closeView(kind)
-    local ok, result, destroy
-    if kind == "settings" then
-        refreshSettings = nil
-        ok, result, destroy = pcall(settingsView.build, host, rules, prettyui)
-    else
-        ok, result = pcall(statusView.build, host, overlay)
-    end
+    local columns = kind == "settings" and 2 or 1
+    local ok, result, destroy = pcall(settingsView.build, host, rules, prettyui, columns)
     if ok then
-        if kind == "settings" then
-            refreshSettings, destroyViews[kind] = result, destroy
-        else
-            destroyViews[kind] = result
-        end
+        refreshViews[kind], destroyViews[kind] = result, destroy
     else
         print("[task-guard] Could not open " .. kind .. ": " .. tostring(result))
     end
@@ -56,7 +47,7 @@ Event.ContentLayerReady.Subscribe(constants.EVENT_PREFIX .. ".content", function
 end)
 
 function PluginShutdown()
-    refreshSettings = nil
+    refreshViews = {}
     print("[task-guard] " .. overlay.remove())
     Event.Logic.Unsubscribe(constants.EVENT_PREFIX .. ".overlay")
     Event.SettingsLayerReady.Unsubscribe(constants.EVENT_PREFIX .. ".settings")
