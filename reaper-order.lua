@@ -4,8 +4,26 @@ local requirements = require("reaper-requirements")
 local taskOrder = require("task-order")
 local ordering = {}
 
-function ordering.new(rules)
+function ordering.new(rules, picker)
+    picker = picker or { interface = 1761, list = 1, companion = 0,
+        title = "Pick A task", firstY = 10, tasks = tasks, preferences = "reaper" }
+    local preferences = rules[picker.preferences] or {}
     local snapshot, rejected
+    local function enabled(row)
+        if preferences[row.name] == false then return false end
+        -- Complete rows were validated during capture. Read their live artwork
+        -- so game requirement/block-list changes also invalidate enabled-first.
+        local disabled = 0
+        for _, item in ipairs(row.items) do
+            if item.kind == 3 then
+                local c = item.control
+                if not c.isRestricted and c.spriteID >= 18504 and c.spriteID <= 18512 then
+                    disabled = disabled + 1
+                end
+            end
+        end
+        return disabled ~= 9
+    end
     local function restore()
         if not snapshot then return end
         local old = snapshot
@@ -29,7 +47,7 @@ function ordering.new(rules)
             and list.width == alternate.width and list.height == alternate.height,
             "Companion list geometry changed")
         local known, components, rows = {}, {}, {}
-        for _, name in ipairs(tasks) do known[name] = true end
+        for _, name in ipairs(picker.tasks) do known[name] = true end
         for _, parent in ipairs({ list, alternate }) do
             parent:IterateDynamicComponents(function(c)
                 if not c or requirements.isOwned(c) then return false end
@@ -45,7 +63,7 @@ function ordering.new(rules)
                         assert(known[c.content], "Unknown native task")
                         assert(c.width == 230 and c.height == 20, "Task dimensions changed")
                         assert(c.x == 8 or c.x == 248, "Task columns changed")
-                        assert(c.y >= 10 and (c.y - 10) % 23 == 0, "Task spacing changed")
+                        assert(c.y >= picker.firstY and (c.y - picker.firstY) % 23 == 0, "Task spacing changed")
                         item.name = c.content
                         rows[#rows + 1] = { name = c.content, x = c.x, y = c.y, items = {} }
                     end
@@ -57,7 +75,7 @@ function ordering.new(rules)
         table.sort(rows, function(a, b) return a.y == b.y and a.x < b.x or a.y < b.y end)
         local names, slots = {}, {}
         for index, row in ipairs(rows) do
-            assert(not names[row.name], "Duplicate task name")
+            assert(not names[row.name] or row.name == picker.duplicateName, "Duplicate task name")
             names[row.name] = true
             slots[index] = { x = row.x, y = row.y }
             if index > 1 then
@@ -110,22 +128,23 @@ function ordering.new(rules)
             and not general.enabledFirst then
             restore(); rejected = nil; return
         end
-        local list = ui.Interfaces:GetComponent(1761, 1)
-        local title = ui.Interfaces:GetComponent(1761, 7, 0, 14)
+        local list = ui.Interfaces:GetComponent(picker.interface, picker.list)
+        local title = ui.Interfaces:GetComponent(picker.interface, 7, 0, 14)
         if not list or list.isRestricted or not list.visibleGlobal or not title or title.isRestricted
-            or not title.visibleGlobal or title.type ~= 2 or title.content ~= "Pick A task" then
+            or not title.visibleGlobal or title.type ~= 2 or title.content ~= picker.title then
             restore(); rejected = nil; return
         end
         if snapshot and snapshot.list ~= list then restore() end
         if rejected == list then return end
-        if not snapshot then snapshot = capture(list, ui.Interfaces:GetComponent(1761, 0)) end
-        assert(ui.Interfaces:GetComponent(1761, 0) == snapshot.alternate
+        if picker.validate then picker.validate(list, title) end
+        if not snapshot then snapshot = capture(list, ui.Interfaces:GetComponent(picker.interface, picker.companion)) end
+        assert(ui.Interfaces:GetComponent(picker.interface, picker.companion) == snapshot.alternate
             and not snapshot.alternate.isRestricted and snapshot.alternate.parent == list.parent,
             "Client replaced companion list")
         local changed = snapshot.taskOrder ~= general.taskOrder or snapshot.enabledFirst ~= general.enabledFirst
         if not changed and general.enabledFirst then
             for _, row in ipairs(snapshot.rows) do
-                if snapshot.enabled[row.name] ~= (rules.reaper[row.name] ~= false) then changed = true; break end
+                if snapshot.enabled[row] ~= enabled(row) then changed = true; break end
             end
         end
         for _, item in ipairs(snapshot.items) do
@@ -141,10 +160,10 @@ function ordering.new(rules)
         end
         if not changed then return end
         table.sort(snapshot.rows, function(a, b)
-            local aEnabled, bEnabled = rules.reaper[a.name] ~= false, rules.reaper[b.name] ~= false
+            local aEnabled, bEnabled = enabled(a), enabled(b)
             if general.enabledFirst and aEnabled ~= bEnabled then return aEnabled end
-            if general.taskOrder == "alphabetical" then return taskOrder.alphabetical(a.name, b.name) end
-            if general.taskOrder == "alphabeticalDescending" then
+            if general.taskOrder == "alphabetical" and a.name ~= b.name then return taskOrder.alphabetical(a.name, b.name) end
+            if general.taskOrder == "alphabeticalDescending" and a.name ~= b.name then
                 return taskOrder.alphabeticalDescending(a.name, b.name)
             end
             return a.y == b.y and a.x < b.x or a.y < b.y
@@ -161,7 +180,7 @@ function ordering.new(rules)
         end
         snapshot.taskOrder, snapshot.enabledFirst = general.taskOrder, general.enabledFirst
         snapshot.enabled = {}
-        for _, row in ipairs(snapshot.rows) do snapshot.enabled[row.name] = rules.reaper[row.name] ~= false end
+        for _, row in ipairs(snapshot.rows) do snapshot.enabled[row] = enabled(row) end
     end
     return {
         restore = restore,
@@ -171,7 +190,7 @@ function ordering.new(rules)
                 local list = snapshot and snapshot.list
                 restore()
                 if not list then
-                    pcall(function() list = ui.Interfaces:GetComponent(1761, 1) end)
+                    pcall(function() list = ui.Interfaces:GetComponent(picker.interface, picker.list) end)
                 end
                 if rejected ~= list then print("[task-guard] Native task ordering unavailable: " .. tostring(err)) end
                 rejected = list

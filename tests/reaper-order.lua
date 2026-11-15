@@ -65,6 +65,14 @@ order.update()
 assert(helwyrLabel.x == 8 and araxxiLabel.x == 248, "Enabled-first must take priority over alphabetic order")
 rules.reaper.Helwyr, rules.reaper.Araxxi = false, true
 order.update()
+rules.general.taskOrder = "alphabeticalDescending"
+order.update()
+assert(helwyrLabel.x == 8,
+    "Game-blocked and plugin-disabled tasks must share the unavailable group")
+for _, c in ipairs(araxxi) do
+    if c.type == 3 then c.spriteID = c.spriteID - 18504 + 18468 end
+end
+order.update()
 assert(araxxiLabel.x == 8)
 rules.general.taskOrder = "alphabeticalDescending"
 order.update()
