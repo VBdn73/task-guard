@@ -1,7 +1,7 @@
 local constants = require("constants")
 local statusView = require("status-view")
 local destroyViews = {}
-local overlay = require("reaper-overlay").new(require("reaper-config"))
+local overlay = require("reaper-overlay").new(require("reaper-config"), prettyui)
 Event.Logic.Subscribe(constants.EVENT_PREFIX .. ".overlay", overlay.update)
 
 local function closeView(kind)

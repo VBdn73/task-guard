@@ -7,10 +7,10 @@ Task Guard is intended to help prevent unwanted Slayer cape choices and Reaper's
 ## Current features
 
 - Plugin settings and ribbon controls to show/remove a Helwyr overlay.
-- Static dark background and grey text, without the standard button hover/press style.
+- Mouse shield with a translucent dark overlay to give Helwyr a disabled appearance while retaining the native entry and border, without button hover/press animation, plus a hover popup explaining that it is blocked by plugin settings rather than game requirements.
 - Validation of the captured label's identity, visibility and bounds before creating the overlay.
 - Removal on detected target movement/replacement, with shutdown cleanup attempts.
-- No discovery scans, native enabled-state probes, automatic task actions, external dependencies or additional permissions.
+- PrettyUI hover tooltip; no discovery scans, native enabled-state probes, automatic task actions or additional permissions.
 
 See **[reapers-choice-findings.md](reapers-choice-findings.md)** for the captured interface structure, evidence, limitations and steps needed to support other Reaper choices. See [planning.md](planning.md) for the broader roadmap.
 
@@ -23,7 +23,7 @@ prf
 pon task-guard
 ```
 
-After Lua changes, run `prl task-guard`; after manifest changes, run `prf` first.
+After Lua changes, run `prl task-guard`; after manifest changes, run `prf` first. PrettyUI (dependency ID `6398181`) must be available.
 
 With Reaper's Choice open and Helwyr visible, open Task Guard settings and press **Overlay Helwyr**. Use **Remove overlay** when finished. The overlay covers the known text bounds only and is removed rather than reapplied when movement is detected.
 
