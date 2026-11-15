@@ -124,6 +124,9 @@ function view.build(host, rules, pretty, columns, showGeneral)
             if rules.general.taskOrder == "alphabetical" then
                 return taskOrder.alphabetical(a.name, b.name)
             end
+            if rules.general.taskOrder == "alphabeticalDescending" then
+                return taskOrder.alphabeticalDescending(a.name, b.name)
+            end
             return a.index < b.index
         end)
         if automatic then
@@ -160,6 +163,8 @@ function view.build(host, rules, pretty, columns, showGeneral)
     orderLabel.font, orderLabel.content = id.Font.MUSEO_SANS_11PT_REGULAR, "Task order"
     orderLabel.alignVertical, orderLabel.clickthrough = ui.AlignMode.CENTRE, true
     assert(pretty.ComboBox and pretty.ComboBox.new, "PrettyUI ComboBox is required")
+    local orderIDs = { default = 1, alphabetical = 2, alphabeticalDescending = 3 }
+    local orders = { "default", "alphabetical", "alphabeticalDescending" }
     dropdown = pretty.ComboBox.new(generalPage.content, {
         x = 95, y = 8, width = 250, height = 34,
         -- PrettyUI's input text does not centre within the ComboBox height;
@@ -167,8 +172,9 @@ function view.build(host, rules, pretty, columns, showGeneral)
         contentMargin = ui.Margin.new(8, 8, 4, 0),
         font = id.Font.MUSEO_SANS_11PT_REGULAR,
         entries = { { label = "Client default", id = 1, order = 1 },
-            { label = "Alphabetical", id = 2, order = 2 } },
-        selectedID = rules.general.taskOrder == "alphabetical" and 2 or 1,
+            { label = "Alphabetical ascending (A-Z)", id = 2, order = 2 },
+            { label = "Alphabetical descending (Z-A)", id = 3, order = 3 } },
+        selectedID = orderIDs[rules.general.taskOrder] or 1,
     })
     generalControls[#generalControls + 1] = dropdown.root
     assert(pretty.CheckboxButton and pretty.CheckboxButton.new, "PrettyUI CheckboxButton is required")
@@ -178,7 +184,7 @@ function view.build(host, rules, pretty, columns, showGeneral)
     enabledCheckbox.items[1].label.font = id.Font.MUSEO_SANS_11PT_REGULAR
     generalControls[#generalControls + 1] = enabledCheckbox.root
     updateGeneral = function()
-        local selectedID = rules.general.taskOrder == "alphabetical" and 2 or 1
+        local selectedID = orderIDs[rules.general.taskOrder] or 1
         if dropdown:GetSelectedID() ~= selectedID then dropdown:Select(selectedID, false) end
         enabledCheckbox:SetSelected("enabledFirst", rules.general.enabledFirst, false)
     end
@@ -197,7 +203,7 @@ function view.build(host, rules, pretty, columns, showGeneral)
         return saveGeneral("enabledFirst", selected)
     end
     dropdown.onChange = function(_, entryID)
-        return saveGeneral("taskOrder", entryID == 2 and "alphabetical" or "default")
+        return saveGeneral("taskOrder", orders[entryID] or "default")
     end
     generalPage:SetContentHeight(90)
     end

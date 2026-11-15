@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Populate Slayer settings and ribbon tabs with the shared task-card menu, independent saved preferences, bulk toggles and general sorting. Existing Reaper preferences are preserved. Slayer native blocking is not implemented.
 - Retain manual Helwyr overlay controls with static visuals and input interception.
 - Remove interface discovery, parent dumps, native enabled-state probes and their configuration/tests from Task Guard.
 - Add `reapers-choice-findings.md` documenting captured IDs, user-reported results, limitations and the extension plan.

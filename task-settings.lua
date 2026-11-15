@@ -1,6 +1,10 @@
 local tasks = require("reaper-tasks")
 local settings = {}
 local key = "taskGuard.tasks.v1"
+local function validOrder(value)
+    if value == "alphabetical" or value == "alphabeticalDescending" then return value end
+    return "default"
+end
 local function validName(name)
     return type(name) == "string" and #name > 0 and #name <= 120
         and not name:find("[%c<>]") and name:find("%S") ~= nil
@@ -30,7 +34,7 @@ function settings.load()
     local reaper = ok and type(saved) == "table" and saved.reaper or nil
     local general = ok and type(saved) == "table" and saved.general or nil
     local rules = { reaper = {}, general = {
-        taskOrder = type(general) == "table" and general.taskOrder == "alphabetical" and "alphabetical" or "default",
+        taskOrder = validOrder(type(general) == "table" and general.taskOrder),
         enabledFirst = type(general) == "table" and general.enabledFirst == true or false,
     } }
     for _, name in ipairs(tasks) do
@@ -57,7 +61,7 @@ end
 function settings.save(rules)
     local general = rules.general or {}
     local data = { nameVersion = 2, reaper = {}, discovered = {}, general = {
-        taskOrder = general.taskOrder == "alphabetical" and "alphabetical" or "default",
+        taskOrder = validOrder(general.taskOrder),
         enabledFirst = general.enabledFirst == true,
     } }
     for _, name in ipairs(tasks) do data.reaper[name] = rules.reaper[name] ~= false end

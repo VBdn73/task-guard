@@ -55,12 +55,20 @@ order.update()
 table.sort = sort
 assert(helwyrLabel.moves == moves, "Unchanged preferences must not rewrite positions")
 assert(sorts == 0, "Unchanged native preferences must not sort rows every tick")
+rules.general.taskOrder = "alphabeticalDescending"
+order.update()
+assert(helwyrLabel.x == 8 and araxxiLabel.x == 248, "Descending ordering must reverse alphabetical rows")
+rules.general.taskOrder = "alphabetical"
+order.update()
 rules.general.enabledFirst = true
 order.update()
 assert(helwyrLabel.x == 8 and araxxiLabel.x == 248, "Enabled-first must take priority over alphabetic order")
 rules.reaper.Helwyr, rules.reaper.Araxxi = false, true
 order.update()
 assert(araxxiLabel.x == 8)
+rules.general.taskOrder = "alphabeticalDescending"
+order.update()
+assert(araxxiLabel.x == 8, "Enabled-first must also take priority over descending order")
 rules.general.taskOrder, rules.general.enabledFirst = "default", false
 order.update()
 assert(helwyrLabel.x == 8 and araxxiLabel.x == 248, "Client default must restore original positions")

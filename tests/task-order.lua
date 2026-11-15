@@ -9,4 +9,8 @@ assert(order.alphabetical("THE Ambassador", "araxxi"), "Comparison must be case-
 assert(order.alphabetical("Therion", "Vorago"), "Only a leading whole-word The is ignored")
 assert(order.alphabetical("Ambassador", "The Ambassador"), "Equal keys need deterministic ordering")
 assert(not order.alphabetical("The Ambassador", "The Ambassador"))
+table.sort(names, order.alphabeticalDescending)
+for index, name in ipairs(expected) do assert(names[#names - index + 1] == name) end
+assert(order.alphabeticalDescending("The Ambassador", "Ambassador"))
+assert(not order.alphabeticalDescending("The Ambassador", "The Ambassador"))
 print("Task Guard alphabetical ordering tests passed")

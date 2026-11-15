@@ -8,4 +8,8 @@ function order.alphabetical(a, b)
     return left < right
 end
 
+function order.alphabeticalDescending(a, b)
+    return order.alphabetical(b, a)
+end
+
 return order

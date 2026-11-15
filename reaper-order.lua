@@ -106,7 +106,8 @@ function ordering.new(rules)
     end
     local function update()
         local general = rules.general or {}
-        if general.taskOrder ~= "alphabetical" and not general.enabledFirst then
+        if general.taskOrder ~= "alphabetical" and general.taskOrder ~= "alphabeticalDescending"
+            and not general.enabledFirst then
             restore(); rejected = nil; return
         end
         local list = ui.Interfaces:GetComponent(1761, 1)
@@ -143,6 +144,9 @@ function ordering.new(rules)
             local aEnabled, bEnabled = rules.reaper[a.name] ~= false, rules.reaper[b.name] ~= false
             if general.enabledFirst and aEnabled ~= bEnabled then return aEnabled end
             if general.taskOrder == "alphabetical" then return taskOrder.alphabetical(a.name, b.name) end
+            if general.taskOrder == "alphabeticalDescending" then
+                return taskOrder.alphabeticalDescending(a.name, b.name)
+            end
             return a.y == b.y and a.x < b.x or a.y < b.y
         end)
         for index, row in ipairs(snapshot.rows) do

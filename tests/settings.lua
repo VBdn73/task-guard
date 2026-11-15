@@ -100,6 +100,17 @@ combo:Select(1, true)
 assert(rules.general.taskOrder == "alphabetical" and combo:GetSelectedID() == 2,
     "Failed dropdown saves must restore the displayed selection")
 fail = false
+combo:Select(3, true)
+assert(rules.general.taskOrder == "alphabeticalDescending"
+    and settings.load().general.taskOrder == "alphabeticalDescending")
+assert(controls[7].y > controls[37].y, "Descending order must put Barrows after Dagannoth Kings")
+assert(controls[1].y >= controls[(#tasks - 1) * 6 + 1].y,
+    "Descending order must keep disabled tasks after enabled tasks")
+fail = true
+combo:Select(2, true)
+assert(rules.general.taskOrder == "alphabeticalDescending" and combo:GetSelectedID() == 3,
+    "Failed saves must restore the descending selection")
+fail = false
 combo:Select(1, true)
 enabledFirst:SetSelected("enabledFirst", false)
 assert(rules.general.taskOrder == "default" and not rules.general.enabledFirst)
