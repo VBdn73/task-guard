@@ -7,7 +7,8 @@ Task Guard is intended to help prevent unwanted Slayer cape choices and Reaper's
 ## Current features
 
 - General, Reaper and Slayer settings tabs styled like Pre-flight Check, with two Reaper tasks per row, green enabled/red disabled backgrounds and checkboxes. Slayer is empty for now.
-- The plugin settings' General tab offers saved Client default/Alphabetical task ordering and an independent enabled-first toggle. The ribbon only shows Reaper and Slayer tabs, but uses the same ordering preferences. Both task lists update immediately; the game's own task picker is unchanged.
+- The plugin settings' General tab offers saved Client default/Alphabetical task ordering and an independent enabled-first toggle. The ribbon only shows Reaper and Slayer tabs, but uses the same ordering preferences. Both plugin task lists update immediately.
+- Experimental native Reaper's Choice ordering uses those same preferences. Complete recognised rows (background sprites, named/empty labels and companion-list labels) move together without replacing task names or dispatching actions. Client default with enabled-first off restores original positions; shutdown and dialog closure attempt restoration too. Unknown or incomplete layouts are left untouched. Native action mapping, hover, scrolling and restoration still require in-client verification.
 - Saved Reaper preferences (enabled means allowed; all tasks are allowed by default). Disabled tasks receive automatic overlays when uniquely resolved in the captured Reaper choice list.
 - Ribbon task toggles using the same saved preferences, with responsive columns sized to fit the longest boss name and checkbox.
 - Side-by-side Enable all and Disable all buttons in the Reaper settings and ribbon menus. Changes are saved together.
@@ -15,7 +16,7 @@ Task Guard is intended to help prevent unwanted Slayer cape choices and Reaper's
 - Task names are used directly for display, persistence and native matching, without runtime aliases. Legacy Telos/Black Stone Dragon/Giant Mole settings are migrated once, preserving disabled preferences. A future game-side rename is treated as a new enabled task.
 - Mouse shield over a disabled, native-styled decorative button, plus a hover popup explaining that it is blocked by plugin settings rather than game requirements. The decoration uses the standard button stylesheet; matching the contextual picker artwork needs in-client verification. Nine separate disabled-row sprites are omitted to avoid the confirmed all-disabled picker lag.
 - Validation of the captured label's identity, visibility and bounds before creating the overlay.
-- Removal on detected target movement/replacement or choice-dialog closure, with independent cleanup attempts for each overlay on shutdown. Retained menu callbacks cannot recreate overlays after shutdown.
+- Existing overlays follow movement of the same task row without rebuilding. Changed identity, parent or dimensions, and choice-dialog closure, remove them; shutdown independently cleans up each overlay. Retained menu callbacks cannot recreate overlays after shutdown.
 - PrettyUI hover tooltip; scoped enumeration of the captured choice list, without global scans, native enabled-state changes, automatic task actions or additional permissions.
 
 See **[reapers-choice-findings.md](reapers-choice-findings.md)** for the captured interface structure, evidence, limitations and steps needed to support other Reaper choices. See [planning.md](planning.md) for the broader roadmap.
@@ -43,6 +44,7 @@ lua tests/reaper-overlay.lua
 lua tests/settings.lua
 lua tests/settings-view.lua
 lua tests/reaper-guard.lua
+lua tests/reaper-order.lua
 ```
 
 Mocks do not verify native rendering or click interception.
@@ -54,6 +56,11 @@ failed/disposed views are cleaned up. Tooltip positions are refreshed only for
 hovered rows, avoiding unnecessary positioning work when many tasks are disabled.
 Tooltips are allocated only on a row's first hover, rather than for every disabled
 task at picker-open. Owned overlay components are excluded from native discovery.
+Task menus only relayout or rewrite card state when preferences or dimensions
+change. Native ordering only sorts on ordering changes (or task toggles with
+enabled-first enabled); idle ticks validate named task labels, with full row
+validation retained before reordering. Shields follow moved rows in place,
+avoiding repeated destruction, allocation and movement-removal logs.
 
 ### Native requirement detection
 

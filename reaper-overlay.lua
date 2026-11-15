@@ -5,6 +5,7 @@ local requirements = require("reaper-requirements")
 function overlay.new(config, prettyUILibrary)
     local name = config.name or "Helwyr"
     local shield, background, tooltip, target, parent, geometry, refreshTooltipPosition
+    local localX, localY, width, height
     local function remove()
         local old = shield
         local oldBackground = background
@@ -56,6 +57,7 @@ function overlay.new(config, prettyUILibrary)
                 local pretty = prettyUILibrary or prettyui
                 assert(pretty and pretty.Tooltip and pretty.Tooltip.attach, "PrettyUI Tooltip is required")
                 parent, geometry = target.parent, bounds(target)
+                localX, localY, width, height = target.x, target.y, target.width, target.height
                 if not config.requirements then
                     background = ui.Button.new(parent)
                     requirements.markOwned(background)
@@ -152,7 +154,19 @@ function overlay.new(config, prettyUILibrary)
             if not shield then return end
             local ok, valid = pcall(function()
                 local c = resolve()
-                return c == target and c.parent == parent and bounds(c) == geometry and shield.visibleGlobal
+                if c ~= target or c.parent ~= parent or c.width ~= width or c.height ~= height then return false end
+                local current = bounds(c)
+                if current ~= geometry then
+                    -- Ordering/scrolling can move the same native row. Keep
+                    -- its shield and tooltip rather than rebuilding them.
+                    if c.x ~= localX or c.y ~= localY then
+                        shield:SetPos(c.x, c.y)
+                        if background then background:SetPos(c.x, c.y) end
+                        localX, localY = c.x, c.y
+                    end
+                    geometry = current
+                end
+                return shield.visibleGlobal
             end)
             if not ok or not valid then
                 print("[task-guard] Target changed or overlay unavailable. " .. remove())

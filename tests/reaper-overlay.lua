@@ -19,7 +19,11 @@ function ui.Button.new(host)
         end,
     })
     made = { visibleGlobal = true, text = text, hooks = {},
-        SetPos = function(_, x, y) assert(x == label.x and y == label.y) end,
+        SetPos = function(self, x, y)
+            assert(x == label.x and y == label.y)
+            self.x, self.y = x, y
+            self.positionWrites = (self.positionWrites or 0) + 1
+        end,
         SetSize = function(_, w, h) assert(w == 230 and h == 20) end,
         Subscribe = function(self, hook, name, callback) self.hooks[hook] = callback or name end, MoveToFront = function() end,
         Destroy = function(self) assert(not self.dead); self.dead = true end }
@@ -113,10 +117,18 @@ probe.update()
 assert(not made.dead)
 label.xyGlobal.y = 711
 probe.update()
-assert(made.dead, "Moving target must remove shield")
-assert(background.dead, "Moving target must remove background")
-assert(popup.dead, "Moving target must remove hover popup")
+assert(not made.dead and not background.dead and not popup.dead,
+    "Moving the same row must reuse its shield, background and tooltip")
+local count, positions = #buttons, made.positionWrites
+probe.update()
+assert(#buttons == count and made.positionWrites == positions, "Stable overlays must not rewrite positions")
+label.x, label.y = 8, 10
+probe.update()
+assert(not made.dead and made.x == 8 and made.y == 10 and background.x == 8 and background.y == 10,
+    "Existing shield and background must follow a reordered task")
+assert(#buttons == count and tooltipCount == 1, "Reordering must not rebuild owned controls")
 probe.remove()
+assert(made.dead and background.dead and popup.dead)
 probe.show()
 current = nil
 probe.update()

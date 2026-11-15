@@ -26,6 +26,14 @@ function view.build(host, rules, pretty, columns, showGeneral)
     local page = tabs:GetPage(reaperIndex)
     local entries = {}
     local layout
+    local lastOrderKey
+    local function orderKey()
+        local parts = { rules.general.taskOrder, tostring(rules.general.enabledFirst) }
+        if rules.general.enabledFirst then
+            for _, name in ipairs(tasks) do parts[#parts + 1] = rules.reaper[name] and "1" or "0" end
+        end
+        return table.concat(parts, ":")
+    end
     local function wheel(_, delta)
         if not page.scrollbarVisible then return true end
         page:ScrollBy(delta * 32)
@@ -58,8 +66,11 @@ function view.build(host, rules, pretty, columns, showGeneral)
         local switch = track(ui.Check.new(layer))
         switch:SetPos(-30, 7, 1, 0); switch:SetSize(22, 22)
         switch.stylesheetID, switch.buttonSize = id.StyleSheet.CHECKBOX_DEFAULT, 22
+        local lastEnabled
         local function update()
             local enabled = rules.reaper[name]
+            if enabled == lastEnabled then return end
+            lastEnabled = enabled
             switch.value = enabled
             background.rgba = enabled and 0x23412DE8 or 0x492626E8
         end
@@ -131,6 +142,7 @@ function view.build(host, rules, pretty, columns, showGeneral)
             end
         end
         page:SetContentHeight(56 + math.ceil(#tasks / columns) * 40)
+        lastOrderKey = orderKey()
     end
     local generalControls = {}
     local updateGeneral
@@ -201,7 +213,7 @@ function view.build(host, rules, pretty, columns, showGeneral)
         end
         if showGeneral and active == 1 then updateGeneral() end
         for _, entry in ipairs(entries) do entry.update() end
-        layout()
+        if orderKey() ~= lastOrderKey then layout() end
         if host.width ~= width or host.height ~= height then
             width, height = host.width, host.height
             for i = 1, #tabDefinitions do tabs:GetPage(i)._scroll:Refresh() end

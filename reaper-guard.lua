@@ -6,6 +6,7 @@ local requirements = require("reaper-requirements")
 local guard = {}
 
 function guard.new(rules, pretty)
+    local nativeOrder = require("reaper-order").new(rules)
     local known, shields, matches, failures = {}, {}, {}, {}
     local blocked, modes = {}, {}
     local stopped = false
@@ -73,6 +74,7 @@ function guard.new(rules, pretty)
         shutdown = function()
             stopped = true
             clear()
+            nativeOrder.restore()
         end,
         addMenu = function(menu)
             if stopped then return end
@@ -154,6 +156,7 @@ function guard.new(rules, pretty)
         end,
         update = function()
             if stopped then return end
+            nativeOrder.update()
             local ok, result = pcall(discover)
             if not ok then
                 clear()

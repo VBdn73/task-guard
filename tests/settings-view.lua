@@ -8,7 +8,9 @@ config = { Font = { FromID = function()
 end } }
 local layers = {}
 local function control(parent)
-    return { parent = parent, SetPos = function(self, ...) self.pos = { ... } end,
+    return { parent = parent, SetPos = function(self, ...)
+            self.pos = { ... }; self.positionWrites = (self.positionWrites or 0) + 1
+        end,
         SetSize = function(self, ...) self.size = { ... } end,
         Subscribe = function() end }
 end
@@ -52,6 +54,9 @@ local view = require("settings-view")
 local refresh, destroy = view.build(host, rules, pretty, "auto")
 assert(layers[1].size[3] == 1 / 3, "Wide ribbon should fit three columns")
 assert(layers[4].pos[2] == 88 and pages[2].contentHeight == 136)
+local writes = layers[1].positionWrites
+for _ = 1, 10 do refresh() end
+assert(layers[1].positionWrites == writes, "Idle view refreshes must not relayout cards")
 host.width = 540
 refresh()
 assert(layers[1].size[3] == 1 / 2, "Resize should fit two columns")
@@ -85,6 +90,9 @@ assert(#definitions == 2 and definitions[1].text == "Reaper" and definitions[2].
     "Ribbon must not include General settings")
 assert(not layers[1].hidden and layers[1].pos[2] > layers[2].pos[2],
     "Ribbon must still apply saved ordering preferences")
+rules.reaper[tasks[1]] = true
+refreshRibbon()
+assert(layers[1].pos[2] == 48, "Shared enabled-first changes must trigger layout")
 active = 2
 refreshRibbon()
 assert(layers[1].hidden)

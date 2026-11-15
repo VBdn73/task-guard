@@ -21,6 +21,40 @@ This is not yet a complete guard implementation. No client build number was reco
 
 ## Verified interface structure
 
+### November 2026 Reaper-only capture
+
+The user supplied capture pages 1–17 (707 visible components reported) with
+local coordinates, parent addresses and sprite IDs. The named choices are
+direct children of static list 1; static list 0 shares its position and parent
+(static container 5) and contains empty labels matching the task rectangles.
+Observed task rectangles are 230 × 20, in columns at local x=8 and x=248,
+with y=10 + 23 × row. These measurements are evidence for this capture only.
+
+For multiple available tasks, list 1 contains nine background sprites
+18468–18476, a named label and an empty label at the same row rectangle.
+The Magister and The Ghrazi Blood Knights instead use 18504–18512 with the
+same nine-piece geometry. Helwyr's captured sprites are dynamic 253–261,
+its named label 262 and its empty label 263. Never derive runtime task IDs
+from these captured offsets.
+
+Dynamic type-9 components 528–613 overlap many task rectangles. Task Guard
+itself creates `ui.Button` decorations and shields in this list, including
+two components for plugin-disabled rows and one for game-blocked rows.
+The subsequent clean capture with Task Guard disabled reported 621 components
+and list 1 ended at dynamic 527, with no type-9 entries in the supplied ending
+pages. The exact reduction of 86 supports these being plugin-owned overlays,
+not native buttons. No separate native BUTTON row was identified.
+
+`reaper-order.lua` now implements experimental ordering by moving all
+recognised row components across lists 0 and 1, keeping their identities and
+actions unchanged. It validates the captured label/background geometry before
+any writes and rejects unknown, duplicate or incomplete layouts. It remembers
+original slots rather than catalogue order. Default ordering, dialog closure
+and shutdown restore surviving unchanged components; client-changed components
+are not overwritten. Guard discovery runs after ordering so requirement checks
+and owned overlays use the new positions. Native action ownership, centre/edge
+clicks, hover, scrolling, reopening and restoration remain unverified in-client.
+
 The capture identified interface **1761** as the choice dialog:
 
 | Component | Static ID | Category ID | Dynamic ID | Observed type |
