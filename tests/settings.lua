@@ -29,7 +29,7 @@ local function control(parent)
     return c
 end
 ui = { Hook = { ONBUTTONPRESSED = 1, ONSCROLLWHEEL = 2 }, AlignMode = { CENTRE = 1 } }
-for _, kind in ipairs({ "Layer", "Rectangle", "Text", "Check" }) do ui[kind] = { new = control } end
+for _, kind in ipairs({ "Layer", "Rectangle", "Text", "Check", "Button" }) do ui[kind] = { new = control } end
 id = { Font = { MUSEO_SANS_11PT_REGULAR = 1 }, StyleSheet = { CHECKBOX_DEFAULT = 1 } }
 local active, destroyed = 1, false
 local pretty = { Tabs = { new = function(_, defs)
@@ -40,14 +40,17 @@ local pretty = { Tabs = { new = function(_, defs)
         Destroy = function() destroyed = true end }
 end } }
 local refresh, destroy = require("settings-view").build({ width = 800, height = 600 }, rules, pretty)
-assert(#controls == #tasks * 5)
-assert(controls[1].y == controls[6].y and controls[6].ax == 0.5)
-assert(controls[11].y == controls[1].y + 40)
+assert(#controls == #tasks * 6)
+assert(controls[1].y == controls[7].y and controls[7].ax == 0.5)
+assert(controls[13].y == controls[1].y + 40)
 for _, c in ipairs(controls) do assert(c.parent ~= pages[2].content) end
-local background, switch = controls[3], controls[5]
+local background, switch, hitTarget = controls[3], controls[6], controls[4]
 assert(background.rgba == 0x23412DE8 and switch.value)
 switch.callbacks[1]()
 assert(not rules.reaper[tasks[1]] and not switch.value and background.rgba == 0x492626E8)
+assert(hitTarget.callbacks[1]() == false)
+assert(rules.reaper[tasks[1]] and switch.value and background.rgba == 0x23412DE8)
+hitTarget.callbacks[1]()
 fail = true
 switch.callbacks[1]()
 assert(not switch.value and not rules.reaper[tasks[1]])
@@ -56,9 +59,11 @@ destroy(); assert(destroyed)
 controls = {}
 fail = false
 local refreshRibbon, destroyRibbon = require("settings-view").build({ width = 300, height = 600 }, rules, pretty, 1)
-assert(controls[6].y == controls[1].y + 40 and controls[6].ax == 0)
+assert(controls[7].y == controls[1].y + 40 and controls[7].ax == 0)
 rules.reaper[tasks[1]] = true
 refreshRibbon()
-assert(controls[5].value and controls[3].rgba == 0x23412DE8, "Views must reflect shared preferences")
+assert(controls[6].value and controls[3].rgba == 0x23412DE8, "Views must reflect shared preferences")
+controls[4].callbacks[1]()
+assert(not controls[6].value and not rules.reaper[tasks[1]], "Ribbon cards must toggle too")
 destroyRibbon()
 print("Task Guard settings tests passed")

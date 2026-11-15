@@ -1,5 +1,7 @@
 # Reaper's Choice: findings and extension plan
 
+> Implementation update: `reaper-guard.lua` now reconciles saved disabled-task preferences against exact, unique dynamic labels in the captured list. It requires the captured title plus multiple known boss labels, then uses the generalised Helwyr overlay factory. The manual implementation notes below describe the original experiment. The new scoped discovery and multi-task behaviour remain unverified in-client; the title address, English names, direct-child list structure and label-only bounds are assumptions requiring validation. No full-hitbox or alternative-input protection is claimed.
+
 ## Outcome
 
 Live-client testing established a useful proof of concept: a plugin-owned overlay above the Helwyr entry intercepted the user's tested clicks without choosing the task. Removing the default button stylesheet and adding a static dark rectangle with grey text also worked in-client, without the overlay's default hover/press animation.

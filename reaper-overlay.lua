@@ -1,7 +1,8 @@
--- Manual mouse-shield experiment. Never selects a native game action.
+-- Owned mouse shield. Never selects or modifies a native game action.
 local overlay = {}
 
 function overlay.new(config, prettyUILibrary)
+    local name = config.name or "Helwyr"
     local shield, background, tooltip, target, parent, geometry, refreshTooltipPosition
     local function remove()
         local old = shield
@@ -28,10 +29,15 @@ function overlay.new(config, prettyUILibrary)
         return "Test overlay removed."
     end
     local function resolve()
-        local t = assert(config.label, "No verified label configured")
-        local c = ui.Interfaces:GetComponent(t.interfaceID, t.staticID, t.categoryID, t.dynamicID)
-        assert(c and not c.isRestricted and c.visibleGlobal, "Helwyr label unavailable")
-        assert(c.type == ui.ComponentType.LABEL and c.content == "Helwyr", "Label is not exactly Helwyr")
+        local c
+        if config.resolve then
+            c = config.resolve()
+        else
+            local t = assert(config.label, "No verified label configured")
+            c = ui.Interfaces:GetComponent(t.interfaceID, t.staticID, t.categoryID, t.dynamicID)
+        end
+        assert(c and not c.isRestricted and c.visibleGlobal, name .. " label unavailable")
+        assert(c.type == ui.ComponentType.LABEL and c.content == name, "Label is not exactly " .. name)
         assert(c.parent and not c.parent.isRestricted, "Label parent unavailable/restricted")
         assert(c.width > 0 and c.height > 0, "Label has no usable bounds")
         return c
@@ -40,6 +46,7 @@ function overlay.new(config, prettyUILibrary)
         return table.concat({ c.x, c.y, c.width, c.height, c.xyGlobal.x, c.xyGlobal.y }, ":")
     end
     return {
+        isShown = function() return shield ~= nil end,
         show = function()
             if shield then return "Overlay already present; remove it before another test." end
             local ok, err = pcall(function()
@@ -68,7 +75,7 @@ function overlay.new(config, prettyUILibrary)
                 shield.enabled = true
                 shield.clickthrough = false
                 shield:Subscribe(ui.Hook.ONBUTTONPRESSED, function()
-                    print("[task-guard] Test overlay received a press. Verify no native task was selected.")
+                    print("[task-guard] Blocked mouse press on " .. name .. ".")
                     return false
                 end)
                 shield:MoveToFront()
@@ -121,7 +128,7 @@ function overlay.new(config, prettyUILibrary)
                 tooltip:Hide()
             end)
             if not ok then return "Overlay failed: " .. tostring(err) .. " | " .. remove() end
-            return "Test overlay shown over Helwyr label bounds only. Mouse blocking NOT verified; edges, right-click and keyboard may bypass it."
+            return "Overlay shown over " .. name .. " label bounds only. Edges, right-click and keyboard may bypass it."
         end,
         remove = remove,
         update = function()

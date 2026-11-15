@@ -1,5 +1,7 @@
 local tasks = require("reaper-tasks")
 local settings = require("task-settings")
+local displayNames = {}
+for label, name in pairs(require("reaper-task-aliases")) do displayNames[name] = label end
 local view = {}
 
 function view.build(host, rules, pretty, columns)
@@ -33,10 +35,16 @@ function view.build(host, rules, pretty, columns)
         local background = track(ui.Rectangle.new(layer))
         background:SetPos(1, 1); background:SetSize(-2, 34, 1, 0)
         background.fill, background.clickthrough = true, true
+        -- Static hit target behind the label and checkbox: clicking the card
+        -- uses the same saved-setting toggle without introducing hover visuals.
+        local hitTarget = track(ui.Button.new(layer))
+        hitTarget:SetPos(0, 0); hitTarget:SetSize(0, 36, 1, 0)
+        hitTarget.stylesheetID = -1
+        hitTarget.enabled, hitTarget.clickthrough = true, false
         local label = track(ui.Text.new(layer))
         label:SetPos(8, 2); label:SetSize(-46, 32, 1, 0)
         label.font = id.Font.MUSEO_SANS_11PT_REGULAR
-        label.content = name
+        label.content = displayNames[name] or name
         label.alignVertical, label.clickthrough = ui.AlignMode.CENTRE, true
         local switch = track(ui.Check.new(layer))
         switch:SetPos(-30, 7, 1, 0); switch:SetSize(22, 22)
@@ -46,7 +54,7 @@ function view.build(host, rules, pretty, columns)
             switch.value = enabled
             background.rgba = enabled and 0x23412DE8 or 0x492626E8
         end
-        switch:Subscribe(ui.Hook.ONBUTTONPRESSED, function()
+        local function toggle()
             local old = rules.reaper[name]
             rules.reaper[name] = not old
             if not settings.save(rules) then
@@ -54,8 +62,10 @@ function view.build(host, rules, pretty, columns)
                 print("[task-guard] Could not save " .. name .. " setting.")
             end
             update()
-            return true
-        end)
+            return false
+        end
+        switch:Subscribe(ui.Hook.ONBUTTONPRESSED, toggle)
+        hitTarget:Subscribe(ui.Hook.ONBUTTONPRESSED, toggle)
         update()
         entries[#entries + 1] = { layer = layer, update = update }
     end

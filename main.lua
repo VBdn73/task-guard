@@ -3,7 +3,7 @@ local settingsView = require("settings-view")
 local rules = require("task-settings").load()
 local refreshViews = {}
 local destroyViews = {}
-local overlay = require("reaper-overlay").new(require("reaper-config"), prettyui)
+local overlay = require("reaper-guard").new(rules, prettyui)
 Event.Logic.Subscribe(constants.EVENT_PREFIX .. ".overlay", function()
     overlay.update()
     for kind, refresh in pairs(refreshViews) do
@@ -48,7 +48,7 @@ end)
 
 function PluginShutdown()
     refreshViews = {}
-    print("[task-guard] " .. overlay.remove())
+    overlay.remove()
     Event.Logic.Unsubscribe(constants.EVENT_PREFIX .. ".overlay")
     Event.SettingsLayerReady.Unsubscribe(constants.EVENT_PREFIX .. ".settings")
     Event.ContentLayerReady.Unsubscribe(constants.EVENT_PREFIX .. ".content")
