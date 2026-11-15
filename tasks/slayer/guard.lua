@@ -1,16 +1,17 @@
 -- Experimental mouse-only guard for the captured Spria/Laniakea picker.
 -- Never changes native actions or game block/prefer lists.
-local factory = require("reaper-overlay")
-local requirements = require("reaper-requirements")
-local tasks = require("slayer-tasks")
-local settings = require("task-settings")
+local factory = require("ui/task-overlay")
+local requirements = require("tasks/requirements")
+local tasks = require("tasks/slayer/catalogue")
+local settings = require("tasks/settings")
+local ordering = require("tasks/slayer/order")
 local guard = {}
 local spriteXs, spriteYs = { 0, 8, 222 }, { 0, 8, 12 }
 local spriteWidths, spriteHeights = { 8, 214, 8 }, { 8, 4, 8 }
 local spriteBases = { 18468, 18477, 18504 }
 
 function guard.new(rules, pretty)
-    local nativeOrder = require("slayer-order").new(rules)
+    local nativeOrder = ordering.new(rules)
     local known, shields = {}, {}
     for _, name in ipairs(tasks) do known[name] = true end
     local stopped, lastError = false, nil

@@ -1,5 +1,5 @@
 -- Run from the project root: lua tests/slayer-catalogue.lua
-local tasks = require("slayer-tasks")
+local tasks = require("tasks/slayer/catalogue")
 local known = {}
 for _, name in ipairs(tasks) do
     assert(not known[name], "Duplicate global Slayer setting: " .. name)
@@ -17,7 +17,7 @@ PersistentDB = {
     GetStructuredData = function() return saved end,
     SetStructuredData = function(_, _, value) saved = value; return true end,
 }
-local settings = require("task-settings")
+local settings = require("tasks/settings")
 local rules = settings.load()
 for old, native in pairs(aliases) do
     assert(rules.slayer[native] == false and saved.slayer[native] == false)

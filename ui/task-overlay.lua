@@ -1,9 +1,18 @@
 -- Owned mouse shield. Never selects or modifies a native game action.
 local overlay = {}
-local requirements = require("reaper-requirements")
+local requirements = require("tasks/requirements")
+local DEFAULT_TEXT_COLOR = 0xBDB8AEFF
+local MAX_TOOLTIP_ANCESTORS = 16
+local TOOLTIP_GAP = 6
+
+local function destroyComponent(component, errors)
+    if not component then return end
+    local ok, err = pcall(function() component:Destroy() end)
+    if not ok then errors[#errors + 1] = tostring(err) end
+end
 
 function overlay.new(config, prettyUILibrary)
-    local name = config.name or "Helwyr"
+    local name = assert(config.name, "Task name is required")
     local shield, background, tooltip, target, parent, geometry, refreshTooltipPosition, activateTooltip
     local localX, localY, width, height
     local hovering = false
@@ -18,28 +27,18 @@ function overlay.new(config, prettyUILibrary)
         activateTooltip = nil
         hovering = false
         local errors = {}
-        if oldTooltip then
-            local ok, err = pcall(function() oldTooltip:Destroy() end)
-            if not ok then errors[#errors + 1] = tostring(err) end
-        end
-        if old then
-            local ok, err = pcall(function() old:Destroy() end)
-            if not ok then errors[#errors + 1] = tostring(err) end
-        end
-        if oldBackground then
-            local ok, err = pcall(function() oldBackground:Destroy() end)
-            if not ok then errors[#errors + 1] = tostring(err) end
-        end
+        destroyComponent(oldTooltip, errors)
+        destroyComponent(old, errors)
+        destroyComponent(oldBackground, errors)
         if #errors > 0 then return "Overlay cleanup failed: " .. table.concat(errors, "; ") .. ". Close/reopen the choice dialog." end
-        return "Test overlay removed."
+        return "Overlay removed."
     end
     local function resolve()
         local c
         if config.resolve then
             c = config.resolve()
         else
-            local t = assert(config.label, "No verified label configured")
-            c = ui.Interfaces:GetComponent(t.interfaceID, t.staticID, t.categoryID, t.dynamicID)
+            error("Task resolver is required")
         end
         assert(c and not c.isRestricted and c.visibleGlobal, name .. " label unavailable")
         assert(c.type == ui.ComponentType.LABEL and c.content == name, "Label is not exactly " .. name)
@@ -54,7 +53,7 @@ function overlay.new(config, prettyUILibrary)
         isShown = function() return shield ~= nil end,
         isMouseOver = function() return shield ~= nil and (hovering or shield.isMouseOver == true) end,
         show = function()
-            if shield then return "Overlay already present; remove it before another test." end
+            if shield then return "Overlay already present." end
             local ok, err = pcall(function()
                 target = resolve()
                 local pretty = prettyUILibrary or prettyui
@@ -84,13 +83,13 @@ function overlay.new(config, prettyUILibrary)
                 -- Keep inputs enabled to avoid risking click-through.
                 shield.stylesheetID = -1
                 shield.text.font = target.font or id.Font.MUSEO_SANS_15PT_REGULAR
-                shield.text.rgba = target.rgba or 0xBDB8AEFF
+                shield.text.rgba = target.rgba or DEFAULT_TEXT_COLOR
                 -- Keep text off the enabled input catcher: native buttons can
                 -- brighten their label on press even with no stylesheet.
                 shield.label = ""
                 if background then
                     background.text.font = target.font or id.Font.MUSEO_SANS_15PT_REGULAR
-                    background.text.rgba = target.rgba or 0xBDB8AEFF
+                    background.text.rgba = target.rgba or DEFAULT_TEXT_COLOR
                     background.label = target.content
                 end
                 shield.enabled = true
@@ -105,7 +104,7 @@ function overlay.new(config, prettyUILibrary)
                 -- Owned, click-through popup: never changes native task requirements.
                 -- Render outside the native scrolling list, which may clip owned children.
                 local popupHost = parent
-                for _ = 1, 16 do
+                for _ = 1, MAX_TOOLTIP_ANCESTORS do
                     local ancestor = popupHost.parent
                     if not ancestor or ancestor.isRestricted then break end
                     popupHost = ancestor
@@ -124,7 +123,7 @@ function overlay.new(config, prettyUILibrary)
                         ancestor = ancestor.parent
                     end
                     local x = math.max(0, math.floor(origin.x - hostOrigin.x - scrollX + (target.width - tooltip.width) / 2))
-                    local y = math.max(0, math.floor(origin.y - hostOrigin.y - scrollY - tooltip.height - 6))
+                    local y = math.max(0, math.floor(origin.y - hostOrigin.y - scrollY - tooltip.height - TOOLTIP_GAP))
                     if tooltip.options.x ~= x or tooltip.options.y ~= y then
                         tooltip.options.x, tooltip.options.y = x, y
                         if tooltip.root then tooltip.root:SetPos(x, y) end
@@ -210,7 +209,7 @@ function overlay.new(config, prettyUILibrary)
                 return shield.visibleGlobal
             end)
             if not ok or not valid then
-                print("[task-guard] Target changed or overlay unavailable. " .. remove())
+                remove()
             elseif refreshTooltipPosition and (hovering or shield.isMouseOver
                 or (config.requirements and target.isMouseOver)) then
                 local positioned, err = pcall(refreshTooltipPosition)

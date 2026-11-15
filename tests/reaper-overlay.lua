@@ -62,8 +62,7 @@ ui.Rectangle = { new = function(host)
     if host == parent then background = rectangle end
     return rectangle
 end }
-local probe = require("reaper-overlay").new({ label = {
-    interfaceID = 1761, staticID = 1, categoryID = 0, dynamicID = 262 } })
+local probe = require("ui/task-overlay").new({ name = "Helwyr", resolve = function() return current end })
 assert(probe.show():find("shown", 1, true))
 background = buttons[1]
 assert(made.enabled == true and made.clickthrough == false)
@@ -74,12 +73,12 @@ assert(made.label == "" and background.label == "Helwyr",
 -- The first button is the disabled decoration; the second is the input shield.
 assert(background.stylesheetID == 96 and background.enabled == false)
 assert(#artwork == 0, "Disabled rows must not allocate decorative sprites")
-assert(require("reaper-requirements").isOwned(made))
-assert(require("reaper-requirements").isOwned(background))
+assert(require("tasks/requirements").isOwned(made))
+assert(require("tasks/requirements").isOwned(background))
 local captured = {}
-for _, sprite in ipairs(artwork) do require("reaper-requirements").capture(sprite, parent, captured) end
+for _, sprite in ipairs(artwork) do require("tasks/requirements").capture(sprite, parent, captured) end
 assert(#captured == 0, "Owned artwork must not be mistaken for native requirements")
-assert(not require("reaper-requirements").isBlocked(label, artwork))
+assert(not require("tasks/requirements").isBlocked(label, artwork))
 made.hooks[ui.Hook.ONBUTTONPRESSED]()
 assert(background.enabled == false and made.stylesheetID == -1)
 assert(popup == nil, "Opening a disabled row must not allocate a tooltip")
@@ -142,7 +141,7 @@ assert(label.enabled == nil, "Must not mutate native enabled state")
 label.content = "Helwyr"
 background = nil
 artwork = {}
-local requirementProbe = require("reaper-overlay").new({ name = "Helwyr", requirements = true,
+local requirementProbe = require("ui/task-overlay").new({ name = "Helwyr", requirements = true,
     resolve = function() return label end })
 assert(requirementProbe.show():find("shown", 1, true))
 assert(tooltipCount == 1, "Requirement rows must not allocate tooltips at picker open")
@@ -173,7 +172,7 @@ assert(not popup.hidden and popup.options.text == "Blocked by requirements",
 requirementProbe.remove()
 assert(made.dead and popup.dead)
 local cursorHovered = false
-local slayerProbe = require("reaper-overlay").new({ name = "Helwyr", requirements = true,
+local slayerProbe = require("ui/task-overlay").new({ name = "Helwyr", requirements = true,
     tooltipText = "Blocked by in-game requirements or your personal Slayer block list",
     isHovered = function() return cursorHovered end, resolve = function() return label end })
 slayerProbe.show()

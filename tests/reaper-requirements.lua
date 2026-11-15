@@ -1,4 +1,4 @@
-local requirements = require("reaper-requirements")
+local requirements = require("tasks/requirements")
 local parent, choices = {}, {}
 function parent:IterateDynamicComponents(callback)
     for _, c in ipairs(choices) do callback(c) end

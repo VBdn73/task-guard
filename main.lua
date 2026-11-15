@@ -1,6 +1,7 @@
 local constants = require("constants")
-local settingsView = require("settings-view")
-local rules = require("task-settings").load()
+local settingsView = require("ui/settings-view")
+local rules = require("tasks/settings").load()
+local tasks = require("tasks/reaper/catalogue")
 local refreshViews = {}
 local destroyViews = {}
 local hosts = {}
@@ -8,9 +9,9 @@ local viewStates = { settings = {}, content = {} }
 local openView
 local closeView
 local stopped = false
-local taskCount = #require("reaper-tasks")
-local overlay = require("reaper-guard").new(rules, prettyui)
-local slayerOverlay = require("slayer-guard").new(rules, prettyui)
+local taskCount = #tasks
+local overlay = require("tasks/reaper/guard").new(rules, prettyui)
+local slayerOverlay = require("tasks/slayer/guard").new(rules, prettyui)
 Event.MiniMenuReady.Subscribe(constants.EVENT_PREFIX .. ".menu", function(event)
     overlay.addMenu(event.miniMenu)
     slayerOverlay.addMenu(event.miniMenu)
@@ -22,7 +23,7 @@ Event.Logic.Subscribe(constants.EVENT_PREFIX .. ".overlay", function()
     if stopped then return end
     overlay.update()
     slayerOverlay.update()
-    local count = #require("reaper-tasks")
+    local count = #tasks
     if count ~= taskCount then
         taskCount = count
         for kind, host in pairs(hosts) do openView(kind, host) end

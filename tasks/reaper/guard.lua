@@ -1,12 +1,13 @@
 -- Resolve fresh, exact labels only in the captured choice list, never globally.
-local factory = require("reaper-overlay")
-local tasks = require("reaper-tasks")
-local settings = require("task-settings")
-local requirements = require("reaper-requirements")
+local factory = require("ui/task-overlay")
+local tasks = require("tasks/reaper/catalogue")
+local settings = require("tasks/settings")
+local requirements = require("tasks/requirements")
+local ordering = require("tasks/native-order")
 local guard = {}
 
 function guard.new(rules, pretty)
-    local nativeOrder = require("reaper-order").new(rules)
+    local nativeOrder = ordering.new(rules)
     local known, shields, matches, failures = {}, {}, {}, {}
     local blocked, modes = {}, {}
     local stopped = false

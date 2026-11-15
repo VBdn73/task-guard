@@ -1,9 +1,9 @@
 -- Run from the project root: lua tests/settings-view.lua
 local tasks = { "Short", "Longest boss name", "Third", "Fourth", "Fifth", "Sixth" }
-package.loaded["reaper-tasks"] = tasks
+package.loaded["tasks/reaper/catalogue"] = tasks
 local longSlayerName = "A very long slayer task name that should wrap across multiple lines"
-package.loaded["slayer-tasks"] = { "Slayer one", longSlayerName }
-package.loaded["task-settings"] = { save = function() return true end }
+package.loaded["tasks/slayer/catalogue"] = { "Slayer one", longSlayerName }
+package.loaded["tasks/settings"] = { save = function() return true end }
 id = { Font = { MUSEO_SANS_11PT_REGULAR = 1 }, StyleSheet = { CHECKBOX_DEFAULT = 1, BUTTON_DEFAULT = 2 } }
 config = { Font = { FromID = function()
     return { GetStringWidth = function(_, name) return name == tasks[2] and 200 or #name * 7 end }
@@ -52,11 +52,11 @@ local pretty = { Tabs = { new = function(_, defs, options)
         GetActiveIndex = function() return active end,
         Destroy = function() destroyed = true end }
 end } }
-pretty.ComboBox = dofile("tests/combo-box-mock.lua")(control)
-pretty.CheckboxButton = dofile("tests/checkbox-mock.lua")(control)
+pretty.ComboBox = require("tests/support/combo-box-mock")(control)
+pretty.CheckboxButton = require("tests/support/checkbox-mock")(control)
 local rules = { reaper = {} }
 for _, name in ipairs(tasks) do rules.reaper[name] = true end
-local view = require("settings-view")
+local view = require("ui/settings-view")
 local refresh, destroy = view.build(host, rules, pretty, "auto")
 local function assertButtonColumns()
     local first = 1

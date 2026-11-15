@@ -7,9 +7,9 @@ PersistentDB = {
         return true
     end,
 }
-local settings = require("task-settings")
-local tasks = require("reaper-tasks")
-local slayerTasks = require("slayer-tasks")
+local settings = require("tasks/settings")
+local tasks = require("tasks/reaper/catalogue")
+local slayerTasks = require("tasks/slayer/catalogue")
 assert(#tasks == 48 and tasks[1] == "Araxxi" and tasks[2] == "The Barrows Brothers")
 assert(tasks[23] == "Gregorovic" and tasks[24] == "Helwyr")
 assert(tasks[43] == "The Gate of Elidinis" and tasks[44] == "Amascut, the Devourer")
@@ -31,6 +31,9 @@ assert(settings.load().slayer[slayerTasks[1]] == false)
 assert(settings.load().reaper.Helwyr == false, "Slayer saves must preserve Reaper preferences")
 rules = settings.load()
 local controls, pages = {}, {}
+config = { Font = { FromID = function()
+    return { GetStringWidth = function(_, text) return #text * 7 end }
+end } }
 local function control(parent)
     local c = { parent = parent, callbacks = {} }
     function c:SetPos(x, y, ax) self.x, self.y, self.ax = x, y, ax end
@@ -46,15 +49,15 @@ id = { Font = { MUSEO_SANS_11PT_REGULAR = 1 }, StyleSheet = { CHECKBOX_DEFAULT =
 local active, destroyed = 1, false
 local pretty = { Tabs = { new = function(_, defs)
     assert(#defs == 3 and defs[1].text == "General" and defs[2].text == "Reaper" and defs[3].text == "Slayer")
-    for i = 1, 3 do pages[i] = { content = {}, _scroll = { Refresh = function() end }, SetContentHeight = function() end } end
+    for i = 1, 3 do pages[i] = { content = { width = 800 }, _scroll = { contentWidth = 800, Refresh = function() end }, SetContentHeight = function() end } end
     return { GetPage = function(_, i) return pages[i] end,
         GetActiveIndex = function() return active end,
         Destroy = function() destroyed = true end }
 end } }
-pretty.ComboBox = dofile("tests/combo-box-mock.lua")(control)
-pretty.CheckboxButton = dofile("tests/checkbox-mock.lua")(control)
-local refresh, destroy = require("settings-view").build({ width = 800, height = 600 }, rules, pretty)
-assert(#controls == (#tasks + #slayerTasks) * 6 + 8)
+pretty.ComboBox = require("tests/support/combo-box-mock")(control)
+pretty.CheckboxButton = require("tests/support/checkbox-mock")(control)
+local refresh, destroy = require("ui/settings-view").build({ width = 800, height = 600 }, rules, pretty)
+assert(#controls == (#tasks + #slayerTasks) * 6 + 9, "Unexpected controls: " .. #controls)
 assert(controls[1].y == controls[7].y and controls[7].ax == 0.5)
 assert(controls[13].y == controls[1].y + 40)
 local slayerStart = #tasks * 6 + 3
@@ -145,7 +148,7 @@ assert(not controls[slayerStart].hidden and not slayerDisable.hidden)
 destroy(); assert(destroyed and combo.destroyed and enabledFirst.destroyed)
 controls = {}
 fail = false
-local refreshRibbon, destroyRibbon = require("settings-view").build({ width = 300, height = 600 }, rules, pretty, 1)
+local refreshRibbon, destroyRibbon = require("ui/settings-view").build({ width = 300, height = 600 }, rules, pretty, 1)
 assert(controls[7].y == controls[1].y + 40 and controls[7].ax == 0)
 rules.reaper[tasks[1]] = true
 refreshRibbon()

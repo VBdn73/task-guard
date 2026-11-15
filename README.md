@@ -92,15 +92,15 @@ Run `lua tests/reaper-requirements.lua` for mocked detection coverage.
 ## Project layout
 
 ```text
-main.lua                    Plugin lifecycle and view event handlers
-status-view.lua             Manual overlay controls and status
-reaper-config.lua           Captured Helwyr label address
-reaper-overlay.lua          Owned overlay creation, validation and cleanup
-tests/lifecycle.lua         Mocked lifecycle coverage
-tests/reaper-overlay.lua    Mocked overlay coverage
-reapers-choice-findings.md  Findings, limitations and extension plan
-planning.md                 Broader implementation roadmap
-changelog.md                Version history
+main.lua                   Plugin lifecycle and event handlers
+tasks/reaper/              Reaper catalogue and picker guard
+tasks/slayer/              Slayer catalogue, picker guard and ordering adapter
+constants.lua              Plugin identity and event prefix
+tasks/                     Shared task settings, ordering, requirements and picker constants
+ui/                        Settings view and owned mouse overlays
+tests/                     Isolated mocked regression suites
+scripts/test.ps1           Complete Lua 5.4 test runner
+scripts/package.ps1        Runtime-only, versioned release ZIP builder
 ```
 
 ## Planned behaviour
@@ -113,7 +113,21 @@ Report bugs and suggestions to [vincent.rs.plugins@gmail.com](mailto:vincent.rs.
 
 ## Permissions and data protection
 
-No additional permissions are requested. Reaper preferences are saved locally through PersistentDB. The overlay reads the configured component's type, restriction, visibility, exact text, parent and geometry. It creates plugin-owned UI and logs overlay actions/errors to the client console. It does not read chat, inventory or character identity, transmit data externally or change native task actions. The captured label address is stored in `reaper-config.lua`; dynamic IDs are not assumed to be stable.
+This plugin requests no additional permissions. General ordering preferences, Reaper and Slayer toggles, and discovered Reaper names are saved locally through PersistentDB under `taskGuard.tasks.v1`. They are retained across reloads and client restarts; no character identity is read and the plugin does not implement character-specific storage. Enable all resets a tab's toggles but does not delete discovered names. There is currently no in-plugin delete-data control; clearing the plugin's PersistentDB data through supported client facilities resets stored data. Uninstall deletion behaviour must be verified in-client.
+
+The plugin reads visible picker labels, component identity, restrictions, geometry and artwork to identify rows. It creates owned UI, moves validated native rows for sorting, and reports failures to the client console. It does not read chat or inventory, send data to the developer or external services, or dispatch native task actions. Data-protection case selection must be confirmed against the current Jagex requirements before submission.
+
+## Release preparation
+
+Run all mocked suites from the repository root with `powershell -File scripts/test.ps1` (Lua 5.4 required). Every suite runs in a separate process to isolate API mocks. Tests do not verify rendering, native action mapping, clipping, input interception or client persistence.
+
+Create the runtime ZIP with `powershell -File scripts/package.ps1`. It includes `main.lua`, `plugin.json`, `constants.lua` and the Lua modules in `tasks/` and `ui/`, retaining relative paths. Tests, editor files and maintainer documentation are excluded. The output is `dist/task-guard-<manifest-version>.zip`; existing releases are not overwritten.
+
+Follow [the submission checklist](../SUBMISSION.md) before publishing. Personally review every module and test in-client on the required platforms. Input/menu customisation is explicitly subject to Jagex review; this refactor is not a compliance certification. Confirm the monitored email, data-protection case and collaboration policy, prepare the listing image/screenshots, and copy the Email, Feedback and collaboration, Permissions, Data protection and EULA sections into the mod.io description. No approval or submission is claimed.
+
+### Email
+
+Contact: [vincent.rs.plugins@gmail.com](mailto:vincent.rs.plugins@gmail.com). Confirm this address is monitored before publishing.
 
 ## EULA
 

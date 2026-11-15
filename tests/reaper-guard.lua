@@ -1,7 +1,7 @@
 -- Reconciliation tests; native mouse interception still needs client testing.
 local created, removed = {}, {}
 PersistentDB = { SetStructuredData = function() return true end }
-package.loaded["reaper-overlay"] = { new = function(config)
+package.loaded["ui/task-overlay"] = { new = function(config)
     local target, shown
     local shield = {
         requirements = config.requirements,
@@ -30,7 +30,7 @@ ui = { ComponentType = { LABEL = 2 }, Interfaces = { GetComponent = function(_, 
     return static == 1 and list or title
 end } }
 local rules = { reaper = { Helwyr = false, Nex = false } }
-local guard = require("reaper-guard").new(rules)
+local guard = require("tasks/reaper/guard").new(rules)
 guard.update()
 assert(created.Helwyr.isShown() and created.Nex.isShown())
 assert(traversals == 1, "All disabled-task checks must share one native list traversal")
@@ -78,7 +78,7 @@ rules.reaper["Telos"] = true
 guard.update()
 assert(not created.Telos.isShown(), "Enabling the native-name preference must remove the shield")
 guard.remove()
-local requirements = require("reaper-requirements")
+local requirements = require("tasks/requirements")
 local nativeBlocked = false
 requirements.isBlocked = function() return nativeBlocked end
 choices = { helwyr, nex }

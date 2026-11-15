@@ -1,4 +1,4 @@
-local order = require("task-order")
+local order = require("tasks/ordering")
 local names = { "The Twin Furies", "Vorago", "The Ambassador", "Araxxi",
     "The Barrows Brothers", "Black Stone Dragon", "The Magister", "Nex" }
 table.sort(names, order.alphabetical)

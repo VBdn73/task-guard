@@ -1,5 +1,10 @@
 -- Captured native disabled background, not a direct requirements API.
 local requirements = {}
+local constants = require("tasks/picker-constants")
+local SPRITE_X = { 0, 8, 222 }
+local SPRITE_Y = { 0, 8, 12 }
+local SPRITE_WIDTH = { 8, 214, 8 }
+local SPRITE_HEIGHT = { 8, 4, 8 }
 local owned = setmetatable({}, { __mode = "k" })
 
 function requirements.markOwned(c)
@@ -23,20 +28,20 @@ function requirements.isBlocked(label, sprites)
         local parent = label.parent
         if not parent or parent.isRestricted then return false end
         local x, y, w, h = label.x, label.y, label.width, label.height
-        if type(x) ~= "number" or type(y) ~= "number" or w ~= 230 or h ~= 20 then return false end
-        local xs, ys, widths, heights = { 0, 8, 222 }, { 0, 8, 12 }, { 8, 214, 8 }, { 8, 4, 8 }
+        if type(x) ~= "number" or type(y) ~= "number"
+            or w ~= constants.ROW_WIDTH or h ~= constants.ROW_HEIGHT then return false end
         local seen, count, ambiguous = {}, 0, false
         local function inspect(c)
             if c and not owned[c] and not c.isRestricted and c.visibleGlobal and c.parent == parent
                 and c.type == 3 and c.x < x + w and c.x + c.width > x
                 and c.y < y + h and c.y + c.height > y then
-                local index = c.spriteID and c.spriteID - 18504
-                if type(index) ~= "number" or index < 0 or index > 8 or index % 1 ~= 0 then
+                local index = c.spriteID and c.spriteID - constants.DISABLED_SPRITE_FIRST
+                if type(index) ~= "number" or index < 0 or index >= constants.ROW_SPRITE_COUNT or index % 1 ~= 0 then
                     ambiguous = true
                 else
                     local column, row = index % 3 + 1, math.floor(index / 3) + 1
-                    if seen[index] or c.x ~= x + xs[column] or c.y ~= y + ys[row]
-                        or c.width ~= widths[column] or c.height ~= heights[row] then
+                    if seen[index] or c.x ~= x + SPRITE_X[column] or c.y ~= y + SPRITE_Y[row]
+                        or c.width ~= SPRITE_WIDTH[column] or c.height ~= SPRITE_HEIGHT[row] then
                         ambiguous = true
                     end
                     seen[index], count = true, count + 1
@@ -49,7 +54,7 @@ function requirements.isBlocked(label, sprites)
         else
             parent:IterateDynamicComponents(inspect)
         end
-        return not ambiguous and count == 9
+        return not ambiguous and count == constants.ROW_SPRITE_COUNT
     end)
     return ok and blocked == true
 end

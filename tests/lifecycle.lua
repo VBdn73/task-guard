@@ -3,7 +3,10 @@ local handlers = {}
 local created, destroyed = 0, 0
 local refreshFails = false
 local slayerUpdates, slayerShutdowns = 0, 0
-package.loaded["slayer-guard"] = { new = function()
+package.loaded["tasks/reaper/guard"] = { new = function()
+    return { addMenu = function() end, update = function() end, shutdown = function() end }
+end }
+package.loaded["tasks/slayer/guard"] = { new = function()
     local stopped = false
     return { menuOpened = function() end, addMenu = function() end, update = function() assert(not stopped); slayerUpdates = slayerUpdates + 1 end,
         shutdown = function() assert(not stopped); stopped = true; slayerShutdowns = slayerShutdowns + 1 end }
@@ -48,7 +51,7 @@ function ui.Text.new(host)
 end
 ui.Button.new = ui.Text.new
 local ribbonState
-package.loaded["settings-view"] = { build = function(host, _, _, _, showGeneral, state)
+package.loaded["ui/settings-view"] = { build = function(host, _, _, _, showGeneral, state)
     if not showGeneral then
         if ribbonState then
             assert(state == ribbonState and state.activeIndex == 2,

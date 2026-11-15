@@ -1,7 +1,11 @@
-local tasks = require("reaper-tasks")
-local slayerTasks = require("slayer-tasks")
-local settings = require("task-settings")
-local taskOrder = require("task-order")
+local tasks = require("tasks/reaper/catalogue")
+local slayerTasks = require("tasks/slayer/catalogue")
+local settings = require("tasks/settings")
+local taskOrder = require("tasks/ordering")
+local MINIMUM_CARD_WIDTH = 246
+local SCROLL_STEP = 32
+local ENABLED_COLOR = 0x23412DE8
+local DISABLED_COLOR = 0x492626E8
 local view = {}
 
 function view.build(host, rules, pretty, columns, showGeneral, state)
@@ -20,7 +24,7 @@ function view.build(host, rules, pretty, columns, showGeneral, state)
     local page = tabs:GetPage(pageIndex)
     local columns = columns or 2
     local automatic = columns == "auto"
-    local minimumCardWidth = 246
+    local minimumCardWidth = MINIMUM_CARD_WIDTH
     local font = config.Font.FromID(id.Font.MUSEO_SANS_11PT_REGULAR)
     if automatic then
         -- Long names wrap instead of dictating the width of every card.
@@ -38,7 +42,7 @@ function view.build(host, rules, pretty, columns, showGeneral, state)
     end
     local function wheel(_, delta)
         if not page.scrollbarVisible then return true end
-        page:ScrollBy(delta * 32)
+        page:ScrollBy(delta * SCROLL_STEP)
         return false
     end
     local function track(control)
@@ -74,15 +78,11 @@ function view.build(host, rules, pretty, columns, showGeneral, state)
             if enabled == lastEnabled then return end
             lastEnabled = enabled
             switch.value = enabled
-            background.rgba = enabled and 0x23412DE8 or 0x492626E8
+            background.rgba = enabled and ENABLED_COLOR or DISABLED_COLOR
         end
-        local function toggle(source)
+        local function toggle()
             local old = preferences[name]
             preferences[name] = not old
-            if pageIndex == reaperIndex + 1 then
-                print("[task-guard] Slayer toggle via " .. source .. ": " .. name
-                    .. " " .. tostring(old) .. " -> " .. tostring(preferences[name]))
-            end
             if not settings.save(rules) then
                 preferences[name] = old
                 print("[task-guard] Could not save " .. name .. " setting.")
@@ -91,8 +91,8 @@ function view.build(host, rules, pretty, columns, showGeneral, state)
             layout()
             return false
         end
-        switch:Subscribe(ui.Hook.ONBUTTONPRESSED, function() return toggle("checkbox") end)
-        hitTarget:Subscribe(ui.Hook.ONBUTTONPRESSED, function() return toggle("card") end)
+        switch:Subscribe(ui.Hook.ONBUTTONPRESSED, toggle)
+        hitTarget:Subscribe(ui.Hook.ONBUTTONPRESSED, toggle)
         update()
         entries[#entries + 1] = { layer = layer, update = update, name = name, index = index,
             frame = frame, background = background, hitTarget = hitTarget, label = label, switch = switch }

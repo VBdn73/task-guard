@@ -1,11 +1,13 @@
 -- Reuse complete-row movement with the captured Slayer picker geometry.
 local ordering = {}
+local nativeOrder = require("tasks/native-order")
+local tasks = require("tasks/slayer/catalogue")
 
 function ordering.new(rules)
-    return require("reaper-order").new(rules, {
+    return nativeOrder.new(rules, {
         interface = 201, list = 5, companion = 4,
         title = "Select your Slayer task", firstY = 5,
-        tasks = require("slayer-tasks"), preferences = "slayer",
+        tasks = tasks, preferences = "slayer",
         duplicateName = "Ravenous strigoi",
         validate = function(list, title)
             local viewport = ui.Interfaces:GetComponent(201, 3)

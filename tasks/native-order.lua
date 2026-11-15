@@ -1,7 +1,8 @@
 -- Move complete captured native rows, never replace text or dispatch actions.
-local tasks = require("reaper-tasks")
-local requirements = require("reaper-requirements")
-local taskOrder = require("task-order")
+local tasks = require("tasks/reaper/catalogue")
+local requirements = require("tasks/requirements")
+local taskOrder = require("tasks/ordering")
+local constants = require("tasks/picker-constants")
 local ordering = {}
 
 function ordering.new(rules, picker)
@@ -17,12 +18,13 @@ function ordering.new(rules, picker)
         for _, item in ipairs(row.items) do
             if item.kind == 3 then
                 local c = item.control
-                if not c.isRestricted and c.spriteID >= 18504 and c.spriteID <= 18512 then
+                if not c.isRestricted and c.spriteID >= constants.DISABLED_SPRITE_FIRST
+                    and c.spriteID <= constants.DISABLED_SPRITE_LAST then
                     disabled = disabled + 1
                 end
             end
         end
-        return disabled ~= 9
+        return disabled ~= constants.ROW_SPRITE_COUNT
     end
     local function restore()
         if not snapshot then return end
@@ -61,7 +63,7 @@ function ordering.new(rules, picker)
                     components[#components + 1] = item
                     if parent == list and c.type == 2 and c.content ~= "" then
                         assert(known[c.content], "Unknown native task")
-                        assert(c.width == 230 and c.height == 20, "Task dimensions changed")
+                        assert(c.width == constants.ROW_WIDTH and c.height == constants.ROW_HEIGHT, "Task dimensions changed")
                         assert(c.x == 8 or c.x == 248, "Task columns changed")
                         assert(c.y >= picker.firstY and (c.y - picker.firstY) % 23 == 0, "Task spacing changed")
                         item.name = c.content
@@ -87,7 +89,8 @@ function ordering.new(rules, picker)
             local matched
             for _, row in ipairs(rows) do
                 if item.x >= row.x and item.y >= row.y
-                    and item.x + item.width <= row.x + 230 and item.y + item.height <= row.y + 20 then
+                    and item.x + item.width <= row.x + constants.ROW_WIDTH
+                    and item.y + item.height <= row.y + constants.ROW_HEIGHT then
                     assert(not matched, "Ambiguous row component")
                     matched = row
                 end

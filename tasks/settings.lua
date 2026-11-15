@@ -1,23 +1,29 @@
-local tasks = require("reaper-tasks")
-local slayerTasks = require("slayer-tasks")
+local tasks = require("tasks/reaper/catalogue")
+local slayerTasks = require("tasks/slayer/catalogue")
 local settings = {}
-local key = "taskGuard.tasks.v1"
+local STORAGE_KEY = "taskGuard.tasks.v1"
+local NAME_VERSION = 2
+local MAX_NAME_LENGTH = 120
+local LEGACY_REAPER_NAMES = { ["Telos, the Warden"] = "Telos",
+    ["Black stone dragon"] = "Black Stone Dragon", ["Giant mole"] = "Giant Mole" }
+local LEGACY_SLAYER_NAMES = { ["Kalphite"] = "Kalphites", ["Kurask"] = "Kurasks",
+    ["Turoth"] = "Turoths", ["Zombies"] = "Zombie", ["Cave slimes"] = "Cave slime",
+    ["Profane scabarites"] = "Profane Scabarites", ["Ravenous strigoi"] = "Ravenous Strigoi" }
 local function validOrder(value)
     if value == "alphabetical" or value == "alphabeticalDescending" then return value end
     return "default"
 end
 local function validName(name)
-    return type(name) == "string" and #name > 0 and #name <= 120
+    return type(name) == "string" and #name > 0 and #name <= MAX_NAME_LENGTH
         and not name:find("[%c<>]") and name:find("%S") ~= nil
 end
 
 function settings.load()
-    local ok, saved = pcall(function() return PersistentDB:GetStructuredData(key) end)
-    local migrated = ok and type(saved) == "table" and saved.nameVersion ~= 2
+    local ok, saved = pcall(function() return PersistentDB:GetStructuredData(STORAGE_KEY) end)
+    local migrated = ok and type(saved) == "table" and saved.nameVersion ~= NAME_VERSION
     if migrated then
         -- Legacy storage migration only. Runtime matching uses exact native names.
-        local oldNames = { ["Telos, the Warden"] = "Telos",
-            ["Black stone dragon"] = "Black Stone Dragon", ["Giant mole"] = "Giant Mole" }
+        local oldNames = LEGACY_REAPER_NAMES
         local data = { reaper = {}, slayer = saved.slayer, discovered = {}, general = saved.general }
         if type(saved.reaper) == "table" then
             for name, value in pairs(saved.reaper) do
@@ -36,9 +42,7 @@ function settings.load()
     local general = ok and type(saved) == "table" and saved.general or nil
     local slayer = ok and type(saved) == "table" and saved.slayer or nil
     -- Catalogue spelling migration only; no runtime fuzzy-name matching.
-    local oldSlayerNames = { ["Kalphite"] = "Kalphites", ["Kurask"] = "Kurasks",
-        ["Turoth"] = "Turoths", ["Zombies"] = "Zombie", ["Cave slimes"] = "Cave slime",
-        ["Profane scabarites"] = "Profane Scabarites", ["Ravenous strigoi"] = "Ravenous Strigoi" }
+    local oldSlayerNames = LEGACY_SLAYER_NAMES
     local rules = { reaper = {}, slayer = {}, general = {
         taskOrder = validOrder(type(general) == "table" and general.taskOrder),
         enabledFirst = type(general) == "table" and general.enabledFirst == true or false,
@@ -72,7 +76,7 @@ end
 
 function settings.save(rules)
     local general = rules.general or {}
-    local data = { nameVersion = 2, reaper = {}, slayer = {}, discovered = {}, general = {
+    local data = { nameVersion = NAME_VERSION, reaper = {}, slayer = {}, discovered = {}, general = {
         taskOrder = validOrder(general.taskOrder),
         enabledFirst = general.enabledFirst == true,
     } }
@@ -82,7 +86,7 @@ function settings.save(rules)
     end
     -- Persist the complete catalogue so dynamically discovered names survive reloads.
     for _, name in ipairs(tasks) do data.discovered[#data.discovered + 1] = name end
-    local ok, result = pcall(function() return PersistentDB:SetStructuredData(key, data) end)
+    local ok, result = pcall(function() return PersistentDB:SetStructuredData(STORAGE_KEY, data) end)
     return ok and result ~= false
 end
 

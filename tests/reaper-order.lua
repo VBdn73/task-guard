@@ -1,5 +1,5 @@
 -- Native actions and rendering still require live-client verification.
-local requirements = require("reaper-requirements")
+local requirements = require("tasks/requirements")
 local list, alternate, title, native, companions
 local function setup()
     native, companions = {}, {}
@@ -43,7 +43,7 @@ requirements.markOwned(owned)
 native[#native + 1] = owned
 local rules = { general = { taskOrder = "alphabetical", enabledFirst = false },
     reaper = { Helwyr = true, Araxxi = false } }
-local order = require("reaper-order").new(rules)
+local order = require("tasks/native-order").new(rules)
 order.update()
 assert(helwyrLabel.x == 248 and araxxiLabel.x == 8, "Alphabetical ordering must swap complete rows")
 for _, c in ipairs(helwyr) do assert(c.x >= 248 and c.x < 478 and c.moves == 1) end
@@ -94,7 +94,7 @@ setup()
 local _, first = row("Helwyr", 8, 10)
 row("Araxxi", 248, 10)
 native[#native + 1] = component(list, 9, 8, 10, 230, 20)
-order = require("reaper-order").new(rules)
+order = require("tasks/native-order").new(rules)
 order.update()
 assert(first.moves == 0, "Unrecognised native components must leave the picker untouched")
 -- Refuse partial backgrounds and duplicate names.
@@ -102,20 +102,20 @@ setup()
 local _, partial = row("Helwyr", 8, 10)
 row("Araxxi", 248, 10)
 table.remove(native, 1)
-order = require("reaper-order").new(rules)
+order = require("tasks/native-order").new(rules)
 order.update()
 assert(partial.moves == 0)
 setup()
 local _, duplicate = row("Helwyr", 8, 10)
 row("Helwyr", 248, 10)
-order = require("reaper-order").new(rules)
+order = require("tasks/native-order").new(rules)
 order.update()
 assert(duplicate.moves == 0)
 -- External client changes must not be overwritten during cleanup.
 setup()
 local _, changed = row("Helwyr", 8, 10)
 row("Araxxi", 248, 10)
-order = require("reaper-order").new(rules)
+order = require("tasks/native-order").new(rules)
 order.update()
 changed.x = 99
 order.update()
@@ -125,7 +125,7 @@ setup()
 local originalRow, originalLabel = row("Helwyr", 8, 10)
 local otherRow, otherLabel = row("Araxxi", 248, 10)
 function originalLabel:SetPos() error("Native position write rejected") end
-order = require("reaper-order").new(rules)
+order = require("tasks/native-order").new(rules)
 order.update()
 assert(originalRow[1].x == 8 and otherRow[1].x == 248 and otherLabel.x == 248,
     "Partial ordering failure must restore earlier writes")

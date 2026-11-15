@@ -3,8 +3,8 @@ local made, removed, entries = 0, 0, {}
 local freshWrappers = false
 local componentMeta = { __eq = function(a, b) return a.nativeID == b.nativeID end }
 local saveFails = false
-package.loaded["task-settings"] = { save = function() return not saveFails end }
-package.loaded["reaper-overlay"] = { new = function(options)
+package.loaded["tasks/settings"] = { save = function() return not saveFails end }
+package.loaded["ui/task-overlay"] = { new = function(options)
     made = made + 1
     local shown = false
     local entry = { options = options }
@@ -58,7 +58,7 @@ end
 local birds = row("Birds", 8, 5)
 row("Cave bugs", 248, 5)
 local rules = { slayer = { Birds = false, ["Cave bugs"] = true, ["Ravenous strigoi"] = false } }
-local controller = require("slayer-guard").new(rules, {})
+local controller = require("tasks/slayer/guard").new(rules, {})
 local function menu(c)
     local result = { entries = { { verbText = "Cancel" }, { verbText = "Choose", componentData = { component = c } } } }
     function result:Add(text, callback, taskID)
@@ -177,7 +177,7 @@ list.children, companion.children = {}, {}
 local a = row("Abyssal demons", 8, 5)
 local b = row("Adamant dragons", 8, 28)
 rules.slayer[a.content], rules.slayer[b.content] = false, false
-local dispatchGuard = require("slayer-guard").new(rules, {})
+local dispatchGuard = require("tasks/slayer/guard").new(rules, {})
 -- A shielded row can have only Cancel. The plugin toggle must NEVER become
 -- the default left-click entry, including when entries is a stale snapshot.
 local cancelOnly = menu(a)
@@ -226,7 +226,7 @@ list.children, companion.children = {}, {}
 local dagannoth = row("Dagannoth", 8, 5, 18504)
 companion.children = {}
 row("Cave bugs", 248, 5)
-local blockedGuard = require("slayer-guard").new({ slayer = { Dagannoth = true } }, {})
+local blockedGuard = require("tasks/slayer/guard").new({ slayer = { Dagannoth = true } }, {})
 local before = made
 blockedGuard.update()
 assert(made == before + 1 and entries[#entries].options.name == "Dagannoth"
@@ -240,7 +240,7 @@ blockedGuard.shutdown()
 for _, c in ipairs(list.children) do
     if c.type == 3 and c.x < 248 then c.spriteID = c.spriteID - 18504 + 18468 end
 end
-blockedGuard = require("slayer-guard").new({ slayer = { Dagannoth = false } }, {})
+blockedGuard = require("tasks/slayer/guard").new({ slayer = { Dagannoth = false } }, {})
 before = made
 blockedGuard.update()
 assert(made == before, "Available rows must still require a visible companion label")

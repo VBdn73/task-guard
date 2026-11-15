@@ -38,7 +38,7 @@ local raven1 = row("Ravenous strigoi", 8, 28)
 local raven2 = row("Ravenous strigoi", 248, 28)
 local rules = { general = { taskOrder = "alphabetical", enabledFirst = false },
     slayer = { Wolves = true, Birds = false, ["Ravenous strigoi"] = true } }
-local order = require("slayer-order").new(rules)
+local order = require("tasks/slayer/order").new(rules)
 order.update()
 assert(birds.x == 8 and birds.y == 5 and wolves.x == 248 and wolves.y == 28)
 assert(raven1.x == 248 and raven1.y == 5 and raven2.x == 8 and raven2.y == 28,
@@ -90,7 +90,7 @@ assert(birds.x == 248 and birds.y == 5, "Shutdown must restore native positions"
 -- Reject unknown/incomplete layouts before any movement.
 local unknown = row("Unknown task", 8, 51)
 moves = wolves.moves
-order = require("slayer-order").new(rules)
+order = require("tasks/slayer/order").new(rules)
 order.update()
 assert(unknown.moves == 0 and wolves.moves == moves)
 print("Task Guard native Slayer ordering tests passed")
