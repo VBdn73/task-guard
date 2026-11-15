@@ -4,6 +4,16 @@ local view = {}
 
 function view.build(host, rules, pretty, columns)
     columns = columns or 2
+    local automatic = columns == "auto"
+    local minimumCardWidth = 0
+    if automatic then
+        local font = config.Font.FromID(id.Font.MUSEO_SANS_11PT_REGULAR)
+        for _, name in ipairs(tasks) do
+            -- Label inset plus space for the checkbox and right-hand padding.
+            minimumCardWidth = math.max(minimumCardWidth, math.ceil(font:GetStringWidth(name, true)) + 46)
+        end
+        columns = 1
+    end
     assert(pretty and pretty.Tabs and pretty.Tabs.new, "PrettyUI Tabs is required")
     local tabs = pretty.Tabs.new(host, {
         { text = "Reaper" }, { text = "Slayer" },
@@ -21,11 +31,7 @@ function view.build(host, rules, pretty, columns)
         return control
     end
     for index, name in ipairs(tasks) do
-        local column = (index - 1) % columns
-        local y = 8 + math.floor((index - 1) / columns) * 40
         local layer = track(ui.Layer.new(page.content))
-        layer:SetPos(column == 0 and 10 or 4, y, column / columns, 0)
-        layer:SetSize(columns == 1 and -20 or -14, 36, 1 / columns, 0)
         layer.clickthrough = true
         local frame = track(ui.Rectangle.new(layer))
         frame:SetSize(0, 36, 1, 0)
@@ -67,8 +73,26 @@ function view.build(host, rules, pretty, columns)
         update()
         entries[#entries + 1] = { layer = layer, update = update }
     end
-    page:SetContentHeight(16 + math.ceil(#tasks / columns) * 40)
-    local width, height, active
+    local function layout()
+        if automatic then
+            local available = page._scroll.contentWidth or page.content.width
+            -- Ten-pixel outside margins and six-pixel gaps between cards.
+            columns = math.max(1, math.min(#tasks, math.floor((available - 14) / (minimumCardWidth + 6))))
+        end
+        for index, entry in ipairs(entries) do
+            local column = (index - 1) % columns
+            local y = 8 + math.floor((index - 1) / columns) * 40
+            if automatic then
+                entry.layer:SetPos(10 + column * 6 / columns, y, column / columns, 0)
+                entry.layer:SetSize(-6 - 14 / columns, 36, 1 / columns, 0)
+            else
+                entry.layer:SetPos(column == 0 and 10 or 4, y, column / columns, 0)
+                entry.layer:SetSize(columns == 1 and -20 or -14, 36, 1 / columns, 0)
+            end
+        end
+        page:SetContentHeight(16 + math.ceil(#tasks / columns) * 40)
+    end
+    local width, height, contentWidth, active
     local function refresh()
         local selected = tabs:GetActiveIndex()
         if selected ~= active then
@@ -79,6 +103,14 @@ function view.build(host, rules, pretty, columns)
         if host.width ~= width or host.height ~= height then
             width, height = host.width, host.height
             for i = 1, 2 do tabs:GetPage(i)._scroll:Refresh() end
+            layout()
+        end
+        local available = page._scroll.contentWidth or page.content.width
+        if available ~= contentWidth then
+            layout()
+            -- Adding a scrollbar can reduce the width across a column threshold.
+            if (page._scroll.contentWidth or page.content.width) ~= available then layout() end
+            contentWidth = page._scroll.contentWidth or page.content.width
         end
     end
     refresh()

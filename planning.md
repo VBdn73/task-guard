@@ -36,3 +36,7 @@ This is a development roadmap, not a promise of complete task blocking. The curr
 - [ ] Verify unrelated Slayer/Reaper dialogs and game block/prefer lists remain untouched.
 - [ ] Update README, changelog, permissions and data-protection details to match implemented behaviour.
 - [ ] Follow the workspace submission checklist and Jagex moderation process before distribution.
+
+## General
+
+- Add ordering by task name in the reapers choice and slayers choice menu
