@@ -66,4 +66,25 @@ assert(controls[6].value and controls[3].rgba == 0x23412DE8, "Views must reflect
 controls[4].callbacks[1]()
 assert(not controls[6].value and not rules.reaper[tasks[1]], "Ribbon cards must toggle too")
 destroyRibbon()
+local count = #tasks
+assert(settings.discover(rules, { "New Reaper Boss", "New Reaper Boss", "<invalid>" }))
+assert(#tasks == count + 1 and rules.reaper["New Reaper Boss"] == true)
+rules.reaper["New Reaper Boss"] = false
+assert(settings.save(rules))
+assert(settings.load().reaper["New Reaper Boss"] == false, "Discovered preferences survive reloads")
+fail = true
+assert(not settings.discover(rules, { "Unsaved Boss" }))
+assert(#tasks == count + 1 and rules.reaper["Unsaved Boss"] == nil)
+fail = false
+saved = { reaper = { ["Telos, the Warden"] = false, ["Black stone dragon"] = false,
+    ["Giant mole"] = false }, discovered = { "Telos, the Warden", "Black stone dragon", "Giant mole" } }
+local migrated = settings.load()
+assert(migrated.reaper.Telos == false and migrated.reaper["Black Stone Dragon"] == false
+    and migrated.reaper["Giant Mole"] == false)
+assert(migrated.reaper["Telos, the Warden"] == nil and migrated.reaper["Black stone dragon"] == nil)
+assert(saved.nameVersion == 2 and saved.reaper["Telos, the Warden"] == nil)
+for _, name in ipairs(tasks) do
+    assert(name ~= "Telos, the Warden" and name ~= "Black stone dragon" and name ~= "Giant mole")
+end
+assert(settings.load().reaper.Telos == false, "Migrated preferences must survive subsequent loads")
 print("Task Guard settings tests passed")

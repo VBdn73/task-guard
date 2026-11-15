@@ -1,7 +1,5 @@
 local tasks = require("reaper-tasks")
 local settings = require("task-settings")
-local displayNames = {}
-for label, name in pairs(require("reaper-task-aliases")) do displayNames[name] = label end
 local view = {}
 
 function view.build(host, rules, pretty, columns)
@@ -44,7 +42,7 @@ function view.build(host, rules, pretty, columns)
         local label = track(ui.Text.new(layer))
         label:SetPos(8, 2); label:SetSize(-46, 32, 1, 0)
         label.font = id.Font.MUSEO_SANS_11PT_REGULAR
-        label.content = displayNames[name] or name
+        label.content = name
         label.alignVertical, label.clickthrough = ui.AlignMode.CENTRE, true
         local switch = track(ui.Check.new(layer))
         switch:SetPos(-30, 7, 1, 0); switch:SetSize(22, 22)

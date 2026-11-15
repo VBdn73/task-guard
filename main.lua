@@ -3,9 +3,17 @@ local settingsView = require("settings-view")
 local rules = require("task-settings").load()
 local refreshViews = {}
 local destroyViews = {}
+local hosts = {}
+local openView
+local taskCount = #require("reaper-tasks")
 local overlay = require("reaper-guard").new(rules, prettyui)
 Event.Logic.Subscribe(constants.EVENT_PREFIX .. ".overlay", function()
     overlay.update()
+    local count = #require("reaper-tasks")
+    if count ~= taskCount then
+        taskCount = count
+        for kind, host in pairs(hosts) do openView(kind, host) end
+    end
     for kind, refresh in pairs(refreshViews) do
         local ok, err = pcall(refresh)
         if not ok then
@@ -27,8 +35,9 @@ local function closeView(kind)
     end
 end
 
-local function openView(kind, host)
+openView = function(kind, host)
     closeView(kind)
+    hosts[kind] = host
     local columns = kind == "settings" and 2 or 1
     local ok, result, destroy = pcall(settingsView.build, host, rules, prettyui, columns)
     if ok then
@@ -47,6 +56,7 @@ Event.ContentLayerReady.Subscribe(constants.EVENT_PREFIX .. ".content", function
 end)
 
 function PluginShutdown()
+    hosts = {}
     refreshViews = {}
     overlay.remove()
     Event.Logic.Unsubscribe(constants.EVENT_PREFIX .. ".overlay")

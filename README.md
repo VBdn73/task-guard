@@ -9,6 +9,8 @@ Task Guard is intended to help prevent unwanted Slayer cape choices and Reaper's
 - Reaper and Slayer settings tabs styled like Pre-flight Check, with two Reaper tasks per row, green enabled/red disabled backgrounds and checkboxes. Slayer is empty for now.
 - Saved Reaper preferences (enabled means allowed; all tasks are allowed by default). Disabled tasks receive automatic overlays when uniquely resolved in the captured Reaper choice list.
 - Ribbon task toggles using the same saved preferences, with one task per row.
+- Dynamic discovery of new, unique visible task labels in the validated Reaper choice list. Discovered tasks are saved locally, default to enabled, and appear in both menus automatically.
+- Task names are used directly for display, persistence and native matching, without runtime aliases. Legacy Telos/Black Stone Dragon/Giant Mole settings are migrated once, preserving disabled preferences. A future game-side rename is treated as a new enabled task.
 - Mouse shield with a translucent dark overlay to give Helwyr a disabled appearance while retaining the native entry and border, without button hover/press animation, plus a hover popup explaining that it is blocked by plugin settings rather than game requirements.
 - Validation of the captured label's identity, visibility and bounds before creating the overlay.
 - Removal on detected target movement/replacement, with shutdown cleanup attempts.
@@ -27,7 +29,7 @@ pon task-guard
 
 After Lua changes, run `prl task-guard`; after manifest changes, run `prf` first. PrettyUI (dependency ID `6398181`) must be available.
 
-The settings menu shows two Reaper tasks per row; the ribbon shows one per row. Both views share saved preferences. Disable a task to overlay its label in Reaper's Choice; enable it to remove the overlay. Matching requires the captured interface 1761, the exact title `Pick A task`, and at least two distinct known boss labels. Unknown, ambiguous, restricted or unavailable labels are left untouched. Matching is English-only and needs live-client validation after UI updates. Shields are reconciled each logic tick on settings changes, movement, replacement and closing/reopening.
+The settings menu shows two Reaper tasks per row; the ribbon shows one per row. Both views share saved preferences. Disable a task to overlay its label in Reaper's Choice; enable it to remove the overlay. Matching requires the captured interface 1761, the exact title `Pick A task`, and at least two distinct known boss labels. New unique task labels in that list are added automatically and default to enabled; ambiguous, restricted or unavailable labels are left untouched. Open and scroll through Reaper's Choice to discover visible new tasks. Discovery does not fetch updates from the wiki or inspect unopened choices. Open plugin menus rebuild when the catalogue grows. Matching is English-only and needs live-client validation after UI updates. Shields are reconciled each logic tick on settings changes, movement, replacement and closing/reopening.
 
 **A failed block can select a task.** Only test a choice you are willing to receive. Edges, context menus, keyboard/controller routes and separate confirmation paths are not verified. Close/reopen the game dialog if cleanup fails. Confirm the approach is permitted with Jagex before distributing.
 
