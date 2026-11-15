@@ -65,7 +65,7 @@ function ordering.new(rules, picker)
                         assert(known[c.content], "Unknown native task")
                         assert(c.width == constants.ROW_WIDTH and c.height == constants.ROW_HEIGHT, "Task dimensions changed")
                         assert(c.x == 8 or c.x == 248, "Task columns changed")
-                        assert(c.y >= picker.firstY and (c.y - picker.firstY) % 23 == 0, "Task spacing changed")
+                        assert(c.y >= picker.firstY and (c.y - picker.firstY) % constants.ROW_SPACING == 0, "Task spacing changed")
                         item.name = c.content
                         rows[#rows + 1] = { name = c.content, x = c.x, y = c.y, items = {} }
                     end
@@ -103,25 +103,28 @@ function ordering.new(rules, picker)
             for _, item in ipairs(row.items) do
                 local c = item.control
                 if item.kind == 2 then
-                    assert(item.x == row.x and item.y == row.y and item.width == 230 and item.height == 20,
+                    assert(item.x == row.x and item.y == row.y
+                        and item.width == constants.ROW_WIDTH and item.height == constants.ROW_HEIGHT,
                         "Label geometry changed")
                     if item.parent == list then labels = labels + 1 else companion = companion + 1 end
                 else
                     assert(item.parent == list, "Unexpected companion sprite")
                     local part
-                    for _, base in ipairs({ 18468, 18477, 18504 }) do
-                        if c.spriteID >= base and c.spriteID <= base + 8 then part = c.spriteID - base end
+                    for _, base in ipairs(constants.BACKGROUND_SPRITE_BASES) do
+                        if c.spriteID >= base and c.spriteID < base + constants.ROW_SPRITE_COUNT then
+                            part = c.spriteID - base
+                        end
                     end
                     assert(part and not seen[part], "Unrecognised background")
                     local column, band = part % 3 + 1, math.floor(part / 3) + 1
-                    assert(item.x == row.x + ({ 0, 8, 222 })[column]
-                        and item.y == row.y + ({ 0, 8, 12 })[band]
-                        and item.width == ({ 8, 214, 8 })[column]
-                        and item.height == ({ 8, 4, 8 })[band], "Background geometry changed")
+                    assert(item.x == row.x + constants.SPRITE_X[column]
+                        and item.y == row.y + constants.SPRITE_Y[band]
+                        and item.width == constants.SPRITE_WIDTH[column]
+                        and item.height == constants.SPRITE_HEIGHT[band], "Background geometry changed")
                     sprites, seen[part] = sprites + 1, true
                 end
             end
-            assert(sprites == 9 and labels == 2 and companion <= 1, "Incomplete task row")
+            assert(sprites == constants.ROW_SPRITE_COUNT and labels == 2 and companion <= 1, "Incomplete task row")
         end
         return { list = list, alternate = alternate, rows = rows, slots = slots, items = components }
     end
@@ -129,13 +132,17 @@ function ordering.new(rules, picker)
         local general = rules.general or {}
         if general.taskOrder ~= "alphabetical" and general.taskOrder ~= "alphabeticalDescending"
             and not general.enabledFirst then
-            restore(); rejected = nil; return
+            restore()
+            rejected = nil
+            return
         end
         local list = ui.Interfaces:GetComponent(picker.interface, picker.list)
         local title = ui.Interfaces:GetComponent(picker.interface, 7, 0, 14)
         if not list or list.isRestricted or not list.visibleGlobal or not title or title.isRestricted
             or not title.visibleGlobal or title.type ~= 2 or title.content ~= picker.title then
-            restore(); rejected = nil; return
+            restore()
+            rejected = nil
+            return
         end
         if snapshot and snapshot.list ~= list then restore() end
         if rejected == list then return end
@@ -154,11 +161,11 @@ function ordering.new(rules, picker)
             -- Named labels are live identity/position sentinels. Recheck all
             -- background/companion components only before an actual reorder.
             if changed or item.name then
-            local c = item.control
-            assert(not c.isRestricted and c.parent == item.parent and c.type == item.kind
-                and c.width == item.width and c.height == item.height
-                and c.x == item.appliedX and c.y == item.appliedY
-                and (item.text == nil or c.content == item.text), "Client changed task layout")
+                local c = item.control
+                assert(not c.isRestricted and c.parent == item.parent and c.type == item.kind
+                    and c.width == item.width and c.height == item.height
+                    and c.x == item.appliedX and c.y == item.appliedY
+                    and (item.text == nil or c.content == item.text), "Client changed task layout")
             end
         end
         if not changed then return end

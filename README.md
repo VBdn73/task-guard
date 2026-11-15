@@ -27,7 +27,7 @@ Task Guard is intended to help prevent unwanted Slayer cape choices and Reaper's
 - Existing overlays follow movement of the same task row without rebuilding. Changed identity, parent or dimensions, and choice-dialog closure, remove them; shutdown independently cleans up each overlay. Retained menu callbacks cannot recreate overlays after shutdown.
 - PrettyUI hover tooltip; scoped enumeration of the captured choice list, without global scans, native enabled-state changes, automatic task actions or additional permissions.
 
-See **[reapers-choice-findings.md](reapers-choice-findings.md)** for the captured interface structure, evidence, limitations and steps needed to support other Reaper choices. See [planning.md](planning.md) for the broader roadmap.
+See [planning.md](planning.md) for the broader roadmap. The native-layout assumptions and remaining client checks are described below.
 
 ## Local development
 
@@ -104,7 +104,7 @@ verification; newly created native rows can still require the next logic tick.
 
 ### Native requirement detection
 
-Task Guard preserves game-blocked row visuals when all nine native background
+Task Guard covers game-blocked rows with matching static visuals when all nine native background
 sprites `18504–18512` match the captured row geometry. This visual-state heuristic
 was captured on The Magister and The Ghrazi Blood Knights; available Helwyr and
 Nex used `18468–18476` normally and `18477–18485` on hover. It is not a direct
@@ -144,7 +144,7 @@ Report bugs and suggestions to [vincent.rs.plugins@gmail.com](mailto:vincent.rs.
 
 ## Permissions and data protection
 
-This plugin requests no additional permissions. General ordering preferences, Reaper and Slayer toggles, and discovered Reaper names are saved locally through PersistentDB under `taskGuard.tasks.v1`. They are retained across reloads and client restarts; no character identity is read and the plugin does not implement character-specific storage. Enable all resets a tab's toggles but does not delete discovered names. There is currently no in-plugin delete-data control; clearing the plugin's PersistentDB data through supported client facilities resets stored data. Uninstall deletion behaviour must be verified in-client.
+This plugin requests no additional permissions. General ordering preferences, Reaper and Slayer toggles, and discovered Reaper names are saved locally through PersistentDB under `taskGuard.tasks.v1.displayName.<normalised-character-name>`. The logged-in character's display name is read to select a profile, ignoring case and surrounding spaces. Data is retained across reloads and client restarts; renaming starts a separate profile and old shared settings are not imported or deleted. Saving is blocked when character identity is unavailable. Enable all resets matching toggles in a tab's current search but does not delete discovered names. There is currently no in-plugin delete-data control; clearing the plugin's PersistentDB data through supported client facilities resets stored data. Uninstall deletion behaviour must be verified in-client.
 
 The plugin reads visible picker labels, component identity, restrictions, geometry and artwork to identify rows. It creates owned UI, moves validated native rows for sorting, and reports failures to the client console. It does not read chat or inventory, send data to the developer or external services, or dispatch native task actions. Data-protection case selection must be confirmed against the current Jagex requirements before submission.
 

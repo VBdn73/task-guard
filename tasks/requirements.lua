@@ -1,10 +1,10 @@
 -- Captured native disabled background, not a direct requirements API.
 local requirements = {}
 local constants = require("tasks/picker-constants")
-local SPRITE_X = { 0, 8, 222 }
-local SPRITE_Y = { 0, 8, 12 }
-local SPRITE_WIDTH = { 8, 214, 8 }
-local SPRITE_HEIGHT = { 8, 4, 8 }
+local SPRITE_X = constants.SPRITE_X
+local SPRITE_Y = constants.SPRITE_Y
+local SPRITE_WIDTH = constants.SPRITE_WIDTH
+local SPRITE_HEIGHT = constants.SPRITE_HEIGHT
 local owned = setmetatable({}, { __mode = "k" })
 
 function requirements.markOwned(c)
@@ -28,8 +28,8 @@ end
 function requirements.index(sprites)
     local bands, broad, cache = {}, {}, {}
     for index, sprite in ipairs(sprites) do
-        local first = math.floor(sprite.y / 23)
-        local last = math.floor((sprite.y + sprite.height) / 23)
+        local first = math.floor(sprite.y / constants.ROW_SPACING)
+        local last = math.floor((sprite.y + sprite.height) / constants.ROW_SPACING)
         if last < first or last - first > 64 then
             broad[#broad + 1] = index
         else
@@ -41,8 +41,8 @@ function requirements.index(sprites)
         end
     end
     return function(label)
-        local first = math.floor(label.y / 23)
-        local last = math.floor((label.y + label.height) / 23)
+        local first = math.floor(label.y / constants.ROW_SPACING)
+        local last = math.floor((label.y + label.height) / constants.ROW_SPACING)
         local key = first .. ":" .. last
         if cache[key] then return cache[key] end
         local found, seen = {}, {}

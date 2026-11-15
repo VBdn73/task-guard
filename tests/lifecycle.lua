@@ -90,10 +90,17 @@ refreshFails = false
 handlers[1]["taskGuard.settings"]({ component = host })
 handlers[2]["taskGuard.content"]({ component = host })
 
+local retainedSettings = handlers[1]["taskGuard.settings"]
+local retainedLogic = handlers[3]["taskGuard.overlay"]
 PluginShutdown()
 PluginShutdown()
 assert(slayerShutdowns == 1, "Shutdown must clean up Slayer exactly once")
 assert(destroyed == created, "Shutdown must clean up all views")
+local previousCreated, previousUpdates = created, slayerUpdates
+retainedSettings({ component = host })
+retainedLogic()
+assert(created == previousCreated and slayerUpdates == previousUpdates,
+    "Retained event callbacks must remain inert after shutdown")
 for _, callbacks in ipairs(handlers) do
     assert(next(callbacks) == nil, "Shutdown must unsubscribe all events")
 end

@@ -11,33 +11,26 @@ local openView
 local closeView
 local stopped = false
 local taskCount = #tasks
-local overlay = require("tasks/reaper/guard").new(rules, prettyui)
-local slayerOverlay = require("tasks/slayer/guard").new(rules, prettyui)
-Event.MiniMenuReady.Subscribe(constants.EVENT_PREFIX .. ".menu", function(event)
-    overlay.addMenu(event.miniMenu, true)
-    slayerOverlay.addMenu(event.miniMenu, true)
-end)
-Event.MiniMenuOpened.Subscribe(constants.EVENT_PREFIX .. ".slayerMenuOpened", function(event)
-    slayerOverlay.menuOpened(event.miniMenu)
-end)
-Event.Logic.Subscribe(constants.EVENT_PREFIX .. ".overlay", function()
-    if stopped then return end
-    local characterChanged = settings.refresh(rules)
-    overlay.update()
-    slayerOverlay.update()
-    local count = #tasks
-    if characterChanged or count ~= taskCount then
-        taskCount = count
-        for kind, host in pairs(hosts) do openView(kind, host) end
+local reaperGuard = require("tasks/reaper/guard").new(rules, prettyui)
+local slayerGuard = require("tasks/slayer/guard").new(rules, prettyui)
+local subscriptions = {}
+
+-- Keep failure reporting while allowing independent cleanup to continue.
+local function try(action, callback)
+    local ok, result, extra = pcall(callback)
+    if not ok then
+        print("[task-guard] " .. action .. ": " .. tostring(result))
     end
-    for kind, refresh in pairs(refreshViews) do
-        local ok, err = pcall(refresh)
-        if not ok then
-            closeView(kind)
-            print("[task-guard] " .. kind .. " refresh failed: " .. tostring(err))
-        end
-    end
-end)
+    return ok, result, extra
+end
+
+local function subscribe(event, suffix, callback)
+    local name = constants.EVENT_PREFIX .. suffix
+    event.Subscribe(name, function(...)
+        if not stopped then return callback(...) end
+    end)
+    subscriptions[#subscriptions + 1] = { event = event, name = name }
+end
 
 closeView = function(kind)
     hosts[kind] = nil
@@ -45,10 +38,7 @@ closeView = function(kind)
     local destroy = destroyViews[kind]
     destroyViews[kind] = nil
     if destroy then
-        local ok, err = pcall(destroy)
-        if not ok then
-            print("[task-guard] Could not close " .. kind .. ": " .. tostring(err))
-        end
+        try("Could not close " .. kind, destroy)
     end
 end
 
@@ -56,34 +46,58 @@ openView = function(kind, host)
     closeView(kind)
     hosts[kind] = host
     local columns = kind == "settings" and 2 or "auto"
-    local ok, result, destroy = pcall(settingsView.build, host, rules, prettyui, columns, true, viewStates[kind])
+    local ok, result, destroy = try("Could not open " .. kind, function()
+        return settingsView.build(host, rules, prettyui, columns, true, viewStates[kind])
+    end)
     if ok then
         refreshViews[kind], destroyViews[kind] = result, destroy
-    else
-        print("[task-guard] Could not open " .. kind .. ": " .. tostring(result))
     end
 end
 
-Event.SettingsLayerReady.Subscribe(constants.EVENT_PREFIX .. ".settings", function(event)
+subscribe(Event.MiniMenuReady, ".menu", function(event)
+    reaperGuard.addMenu(event.miniMenu, true)
+    slayerGuard.addMenu(event.miniMenu, true)
+end)
+
+subscribe(Event.MiniMenuOpened, ".slayerMenuOpened", function(event)
+    slayerGuard.menuOpened(event.miniMenu)
+end)
+
+subscribe(Event.Logic, ".overlay", function()
+    local characterChanged = settings.refresh(rules)
+    reaperGuard.update()
+    slayerGuard.update()
+    local count = #tasks
+    if characterChanged or count ~= taskCount then
+        taskCount = count
+        -- Character changes replace preference tables; rebuild both views even
+        -- when the newly loaded catalogue has the same number of tasks.
+        for kind, host in pairs(hosts) do openView(kind, host) end
+    end
+    for kind, refresh in pairs(refreshViews) do
+        if not try(kind .. " refresh failed", refresh) then closeView(kind) end
+    end
+end)
+
+subscribe(Event.SettingsLayerReady, ".settings", function(event)
     openView("settings", event.component)
 end)
 
-Event.ContentLayerReady.Subscribe(constants.EVENT_PREFIX .. ".content", function(event)
+subscribe(Event.ContentLayerReady, ".content", function(event)
     openView("content", event.component)
 end)
 
 function PluginShutdown()
     if stopped then return end
     stopped = true
-    Event.Logic.Unsubscribe(constants.EVENT_PREFIX .. ".overlay")
-    Event.MiniMenuReady.Unsubscribe(constants.EVENT_PREFIX .. ".menu")
-    Event.MiniMenuOpened.Unsubscribe(constants.EVENT_PREFIX .. ".slayerMenuOpened")
-    Event.SettingsLayerReady.Unsubscribe(constants.EVENT_PREFIX .. ".settings")
-    Event.ContentLayerReady.Unsubscribe(constants.EVENT_PREFIX .. ".content")
-    local ok, err = pcall(overlay.shutdown)
-    if not ok then print("[task-guard] Could not shut down overlays: " .. tostring(err)) end
-    local slayerOK, slayerError = pcall(slayerOverlay.shutdown)
-    if not slayerOK then print("[task-guard] Could not shut down Slayer overlays: " .. tostring(slayerError)) end
+    for _, subscription in ipairs(subscriptions) do
+        try("Could not unsubscribe " .. subscription.name, function()
+            subscription.event.Unsubscribe(subscription.name)
+        end)
+    end
+    subscriptions = {}
+    try("Could not shut down Reaper overlays", reaperGuard.shutdown)
+    try("Could not shut down Slayer overlays", slayerGuard.shutdown)
     closeView("settings")
     closeView("content")
 end

@@ -6,10 +6,11 @@ local tasks = require("tasks/slayer/catalogue")
 local settings = require("tasks/settings")
 local ordering = require("tasks/slayer/order")
 local hover = require("ui/task-hover")
+local constants = require("tasks/picker-constants")
 local guard = {}
-local spriteXs, spriteYs = { 0, 8, 222 }, { 0, 8, 12 }
-local spriteWidths, spriteHeights = { 8, 214, 8 }, { 8, 4, 8 }
-local spriteBases = { 18468, 18477, 18504 }
+local spriteXs, spriteYs = constants.SPRITE_X, constants.SPRITE_Y
+local spriteWidths, spriteHeights = constants.SPRITE_WIDTH, constants.SPRITE_HEIGHT
+local spriteBases = constants.BACKGROUND_SPRITE_BASES
 
 function guard.new(rules, pretty)
     local nativeOrder = ordering.new(rules)
@@ -46,7 +47,7 @@ function guard.new(rules, pretty)
                 and sprite.y < c.y + c.height and sprite.y + sprite.height > c.y then
                 local index, spriteBase
                 for _, start in ipairs(spriteBases) do
-                    if sprite.spriteID >= start and sprite.spriteID <= start + 8 then
+                    if sprite.spriteID >= start and sprite.spriteID < start + constants.ROW_SPRITE_COUNT then
                         index, spriteBase = sprite.spriteID - start, start
                     end
                 end
@@ -57,7 +58,7 @@ function guard.new(rules, pretty)
                 base, seen[index], count = spriteBase, true, count + 1
             end
         end
-        return count == 9
+        return count == constants.ROW_SPRITE_COUNT
     end
     local function discover()
         local title = ui.Interfaces:GetComponent(201, 7, 0, 14)

@@ -2,6 +2,7 @@ local tasks = require("tasks/reaper/catalogue")
 local slayerTasks = require("tasks/slayer/catalogue")
 local settings = require("tasks/settings")
 local taskOrder = require("tasks/ordering")
+local textWrap = require("ui/text-wrap")
 local MINIMUM_CARD_WIDTH = 246
 local SCROLL_STEP = 32
 local ENABLED_COLOR = 0x23412DE8
@@ -219,16 +220,9 @@ function view.build(host, rules, pretty, columns, showGeneral, state)
         end
         local heights = {}
         for index, entry in ipairs(visibleEntries) do
-            local lines, line = {}, ""
-            for word in entry.name:gmatch("%S+") do
-                local candidate = line == "" and word or line .. " " .. word
-                if line ~= "" and font:GetStringWidth(candidate, true) > math.max(1, cardWidth - 46) then
-                    lines[#lines + 1], line = line, word
-                else
-                    line = candidate
-                end
-            end
-            lines[#lines + 1] = line
+            local lines = textWrap.lines(entry.name, math.max(1, cardWidth - 46), function(text)
+                return font:GetStringWidth(text, true)
+            end)
             entry.label.content = table.concat(lines, "<br>")
             local row = math.floor((index - 1) / columns) + 1
             heights[row] = math.max(heights[row] or 36, #lines * 18 + 4)
@@ -336,16 +330,9 @@ function view.build(host, rules, pretty, columns, showGeneral, state)
             enabledCheckbox.root:SetPos(10, stacked and 84 or 50)
             local informationY = stacked and 130 or 96
             information:SetPos(10, informationY)
-            local lines, line = {}, ""
-            for word in informationText:gmatch("%S+") do
-                local candidate = line == "" and word or line .. " " .. word
-                if line ~= "" and informationFont:GetStringWidth(candidate) > available then
-                    lines[#lines + 1], line = line, word
-                else
-                    line = candidate
-                end
-            end
-            lines[#lines + 1] = line
+            local lines = textWrap.lines(informationText, available, function(text)
+                return informationFont:GetStringWidth(text)
+            end)
             information.content = table.concat(lines, "<br>")
             information:SetSize(available, #lines * 20)
             generalPage:SetContentHeight(informationY + 10 + #lines * 20)

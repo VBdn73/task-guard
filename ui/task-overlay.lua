@@ -2,6 +2,7 @@
 local overlay = {}
 local requirements = require("tasks/requirements")
 local tooltipFactory = require("ui/task-tooltip")
+local constants = require("tasks/picker-constants")
 local MAX_TOOLTIP_ANCESTORS = 16
 local TOOLTIP_GAP = 6
 local activeTooltip
@@ -74,13 +75,12 @@ function overlay.new(config, prettyUILibrary)
                     -- Cover the underlying enabled/hover/pressed appearance,
                     -- including any transparent pixels in the disabled artwork.
                     background:AddRectangle(0, 0, width, height, 0x201F1BFF)
-                    if width == 230 and height == 20 then
-                        local xs, ys = { 0, 8, 222 }, { 0, 8, 12 }
-                        local widths, heights = { 8, 214, 8 }, { 8, 4, 8 }
-                        for index = 0, 8 do
+                    if width == constants.ROW_WIDTH and height == constants.ROW_HEIGHT then
+                        for index = 0, constants.ROW_SPRITE_COUNT - 1 do
                             local column, row = index % 3 + 1, math.floor(index / 3) + 1
-                            background:AddSprite(xs[column], ys[row], widths[column], heights[row],
-                                18504 + index, 0xFFFFFFFF)
+                            background:AddSprite(constants.SPRITE_X[column], constants.SPRITE_Y[row],
+                                constants.SPRITE_WIDTH[column], constants.SPRITE_HEIGHT[row],
+                                constants.DISABLED_SPRITE_FIRST + index, 0xFFFFFFFF)
                         end
                     end
                     local text = ui.TextDataConfig.new()
