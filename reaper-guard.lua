@@ -64,8 +64,85 @@ function guard.new(rules, pretty)
         return found
     end
     local lastError
-    return {
+    local controller
+    controller = {
         remove = clear,
+        addMenu = function(menu)
+            -- Refresh native requirements and identities before offering an action.
+            controller.update()
+            local selected
+            for name, c in pairs(matches) do
+                local hovered = c.isMouseOver or (shields[name] and shields[name].isMouseOver
+                    and shields[name].isMouseOver())
+                for _, entry in ipairs(menu.entries) do
+                    if entry.componentData and entry.componentData.component == c then hovered = true end
+                end
+                if hovered then
+                    if selected then return end
+                    selected = name
+                end
+            end
+            if not selected or blocked[selected] then return end
+            local target = matches[selected]
+            local enabled = rules.reaper[selected] ~= false
+            local text = enabled and "Disable task" or "Enable task"
+            local count, cancelIndex = #menu.entries
+            for index, entry in ipairs(menu.entries) do
+                if entry.verbText == "Cancel"
+                    or (MiniMenuActionType and entry.actionType == MiniMenuActionType.CANCEL) then
+                    cancelIndex = index
+                    break
+                end
+            end
+            local taskID
+            for index, name in ipairs(tasks) do
+                if name == selected then taskID = index; break end
+            end
+            -- MiniMenu dispatches callbacks with the action's user data. The
+            -- default (zero) is shared by every action without an explicit ID.
+            menu:Add(text, function(selectedID)
+                if selectedID ~= taskID then return end
+                controller.update()
+                -- A menu may outlive its dialog or the requirement state.
+                if matches[selected] ~= target or blocked[selected] then return end
+                local old = rules.reaper[selected]
+                rules.reaper[selected] = not enabled
+                if not settings.save(rules) then
+                    rules.reaper[selected] = old
+                    print("[task-guard] Could not save " .. selected .. " setting.")
+                end
+                controller.update()
+            end, taskID)
+            -- Native menus store low-priority entries first, with the default
+            -- left-click action last. Keep our action beside Cancel, not last.
+            local actionIndex, currentCancel
+            local entries = menu.entries
+            for index, entry in ipairs(entries) do
+                if entry.overrideText == text or entry.verbText == text or entry.label == text then
+                    actionIndex = index
+                end
+                if entry.verbText == "Cancel"
+                    or (MiniMenuActionType and entry.actionType == MiniMenuActionType.CANCEL) then
+                    currentCancel = index
+                end
+            end
+            if actionIndex and currentCancel then
+                local destination = currentCancel + (actionIndex > currentCancel and 1 or 0)
+                if destination < #entries then
+                    while actionIndex < destination do
+                        menu:Swap(actionIndex, actionIndex + 1)
+                        actionIndex = actionIndex + 1
+                    end
+                    while actionIndex > destination do
+                        menu:Swap(actionIndex - 1, actionIndex)
+                        actionIndex = actionIndex - 1
+                    end
+                end
+            elseif #entries == count and cancelIndex == 1 then
+                -- Some clients retain the pre-Add entries snapshot.
+                menu:Swap(1, 2)
+            end
+        end,
         update = function()
             local ok, result = pcall(discover)
             if not ok then
@@ -110,6 +187,7 @@ function guard.new(rules, pretty)
             end
         end,
     }
+    return controller
 end
 
 return guard

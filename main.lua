@@ -7,6 +7,9 @@ local hosts = {}
 local openView
 local taskCount = #require("reaper-tasks")
 local overlay = require("reaper-guard").new(rules, prettyui)
+Event.MiniMenuReady.Subscribe(constants.EVENT_PREFIX .. ".menu", function(event)
+    overlay.addMenu(event.miniMenu)
+end)
 Event.Logic.Subscribe(constants.EVENT_PREFIX .. ".overlay", function()
     overlay.update()
     local count = #require("reaper-tasks")
@@ -60,6 +63,7 @@ function PluginShutdown()
     refreshViews = {}
     overlay.remove()
     Event.Logic.Unsubscribe(constants.EVENT_PREFIX .. ".overlay")
+    Event.MiniMenuReady.Unsubscribe(constants.EVENT_PREFIX .. ".menu")
     Event.SettingsLayerReady.Unsubscribe(constants.EVENT_PREFIX .. ".settings")
     Event.ContentLayerReady.Unsubscribe(constants.EVENT_PREFIX .. ".content")
     closeView("settings")

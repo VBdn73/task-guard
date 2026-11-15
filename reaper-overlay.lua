@@ -54,6 +54,7 @@ function overlay.new(config, prettyUILibrary)
     end
     return {
         isShown = function() return shield ~= nil end,
+        isMouseOver = function() return shield ~= nil and shield.isMouseOver == true end,
         show = function()
             if shield then return "Overlay already present; remove it before another test." end
             local ok, err = pcall(function()

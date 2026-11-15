@@ -101,3 +101,69 @@ assert(created.Helwyr.isShown() and created.Helwyr.requirements,
     "Requirement tooltips must also work for plugin-allowed tasks")
 guard.remove()
 print("Task Guard reaper guard tests passed")
+nativeBlocked = false
+rules.reaper.Helwyr = true
+helwyr.isMouseOver = true
+local function menu()
+    return {
+        entries = { { verbText = "Cancel" }, { verbText = "Select" } },
+        Add = function(self, text, callback, taskID)
+            assert(type(taskID) == "number" and taskID > 0, "Actions need task-specific user data")
+            table.insert(self.entries, 1, { overrideText = text,
+                callback = function() callback(taskID) end, dispatch = callback, taskID = taskID })
+        end,
+        Swap = function(self, a, b) self.entries[a], self.entries[b] = self.entries[b], self.entries[a] end,
+    }
+end
+local actions = menu()
+guard.addMenu(actions)
+assert(actions.entries[3].verbText == "Select", "Keep the native left-click default last")
+assert(actions.entries[2].overrideText == "Disable task")
+actions.entries[2].callback()
+assert(rules.reaper.Helwyr == false and created.Helwyr.isShown())
+actions = menu()
+guard.addMenu(actions)
+assert(actions.entries[2].overrideText == "Enable task")
+PersistentDB.SetStructuredData = function() return false end
+actions.entries[2].callback()
+assert(rules.reaper.Helwyr == false, "Failed saves must roll back")
+PersistentDB.SetStructuredData = function() return true end
+actions.entries[2].callback()
+assert(rules.reaper.Helwyr == true and not created.Helwyr.isShown())
+actions = menu()
+guard.addMenu(actions)
+nativeBlocked = true
+actions.entries[2].callback()
+assert(rules.reaper.Helwyr == true, "Recheck requirements when selecting a stale action")
+actions = menu()
+guard.addMenu(actions)
+assert(#actions.entries == 2, "Requirement-blocked tasks must not offer toggles")
+nativeBlocked = false
+actions = menu()
+guard.addMenu(actions)
+list.visibleGlobal = false
+actions.entries[2].callback()
+assert(rules.reaper.Helwyr == true, "Closed dialogs must invalidate menu actions")
+guard.remove()
+print("Task Guard task menu tests passed")
+list.visibleGlobal = true
+nativeBlocked = false
+helwyr.isMouseOver = false
+local barrows, chaos = label("The Barrows Brothers"), label("Chaos Elemental")
+choices = { barrows, chaos }
+rules.reaper[barrows.content], rules.reaper[chaos.content] = true, true
+barrows.isMouseOver = true
+local barrowsMenu = menu()
+guard.addMenu(barrowsMenu)
+barrows.isMouseOver, chaos.isMouseOver = false, true
+local chaosMenu = menu()
+guard.addMenu(chaosMenu)
+local barrowsAction, chaosAction = barrowsMenu.entries[2], chaosMenu.entries[2]
+assert(barrowsAction.taskID ~= chaosAction.taskID)
+-- Simulate dispatch to retained callbacks: only the matching action may save.
+barrowsAction.dispatch(barrowsAction.taskID)
+chaosAction.dispatch(barrowsAction.taskID)
+assert(rules.reaper[barrows.content] == false)
+assert(rules.reaper[chaos.content] == true, "Disabling Barrows must leave Chaos Elemental enabled")
+guard.remove()
+print("Task Guard independent menu dispatch tests passed")

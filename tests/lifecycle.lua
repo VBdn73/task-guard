@@ -19,6 +19,7 @@ end
 
 Event = { SettingsLayerReady = event(), ContentLayerReady = event() }
 Event.Logic = event()
+Event.MiniMenuReady = event()
 id = { Font = { MUSEO_SANS_15PT_REGULAR = 1 }, StyleSheet = { BUTTON_DEFAULT = 1 } }
 ui = { Text = {}, Button = {}, Hook = { ONBUTTONPRESSED = 1 }, ComponentType = { BUTTON = 1 } }
 
