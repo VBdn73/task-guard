@@ -4,8 +4,9 @@ local requirements = require("reaper-requirements")
 
 function overlay.new(config, prettyUILibrary)
     local name = config.name or "Helwyr"
-    local shield, background, tooltip, target, parent, geometry, refreshTooltipPosition
+    local shield, background, tooltip, target, parent, geometry, refreshTooltipPosition, activateTooltip
     local localX, localY, width, height
+    local hovering = false
     local function remove()
         local old = shield
         local oldBackground = background
@@ -14,6 +15,8 @@ function overlay.new(config, prettyUILibrary)
         background = nil
         tooltip = nil
         refreshTooltipPosition = nil
+        activateTooltip = nil
+        hovering = false
         local errors = {}
         if oldTooltip then
             local ok, err = pcall(function() oldTooltip:Destroy() end)
@@ -49,7 +52,7 @@ function overlay.new(config, prettyUILibrary)
     end
     return {
         isShown = function() return shield ~= nil end,
-        isMouseOver = function() return shield ~= nil and shield.isMouseOver == true end,
+        isMouseOver = function() return shield ~= nil and (hovering or shield.isMouseOver == true) end,
         show = function()
             if shield then return "Overlay already present; remove it before another test." end
             local ok, err = pcall(function()
@@ -82,7 +85,14 @@ function overlay.new(config, prettyUILibrary)
                 shield.stylesheetID = -1
                 shield.text.font = target.font or id.Font.MUSEO_SANS_15PT_REGULAR
                 shield.text.rgba = target.rgba or 0xBDB8AEFF
-                shield.label = config.requirements and "" or target.content
+                -- Keep text off the enabled input catcher: native buttons can
+                -- brighten their label on press even with no stylesheet.
+                shield.label = ""
+                if background then
+                    background.text.font = target.font or id.Font.MUSEO_SANS_15PT_REGULAR
+                    background.text.rgba = target.rgba or 0xBDB8AEFF
+                    background.label = target.content
+                end
                 shield.enabled = true
                 -- Click-through controls do not reliably receive native hover
                 -- hooks. Requirement-blocked rows need the same hit target, but
@@ -123,8 +133,13 @@ function overlay.new(config, prettyUILibrary)
                 -- Most rows are never hovered. Do not allocate a PrettyUI popup
                 -- and its hover hooks for every disabled task at picker-open.
                 refreshTooltipPosition = positionTooltip
-                local function hover()
-                    if not shield then return true end
+                local hover
+                local function leave()
+                    hovering = false
+                    if tooltip then tooltip:Hide() end
+                    return true
+                end
+                local function ensureTooltip()
                     if not tooltip then
                         tooltip = pretty.Tooltip.attach(shield, popupHost, {
                             text = config.requirements and "Blocked by requirements" or "Blocked by Task Guard plugin",
@@ -133,7 +148,16 @@ function overlay.new(config, prettyUILibrary)
                         -- Keep our placement after PrettyUI's automatic hover
                         -- placement on subsequent entries as well.
                         shield:Subscribe(ui.Hook.ONMOUSEOVER, "taskGuard.tooltipPosition", hover)
+                        shield:Subscribe(ui.Hook.ONMOUSELEAVE, "taskGuard.tooltipLeave", leave)
                     end
+                end
+                hover = function()
+                    if not shield then return true end
+                    hovering = true
+                    -- Attach requirement hooks outside the native hover dispatch,
+                    -- lazily on the next logic tick, not for every row at open.
+                    if config.requirements and not tooltip then return true end
+                    ensureTooltip()
                     if tooltip then
                         tooltip:Show()
                         positionTooltip()
@@ -144,6 +168,14 @@ function overlay.new(config, prettyUILibrary)
                     return true
                 end
                 shield:Subscribe(ui.Hook.ONMOUSEOVER, "taskGuard.tooltipPosition", hover)
+                shield:Subscribe(ui.Hook.ONMOUSELEAVE, "taskGuard.tooltipLeave", leave)
+                if config.requirements and ui.Hook.ONMOUSEREPEAT then
+                    shield:Subscribe(ui.Hook.ONMOUSEREPEAT, "taskGuard.tooltipRepeat", hover)
+                end
+                activateTooltip = function()
+                    ensureTooltip()
+                    hover()
+                end
             end)
             if not ok then return "Overlay failed: " .. tostring(err) .. " | " .. remove() end
             if config.requirements then return "Requirements tooltip shown over " .. name .. "." end
@@ -170,8 +202,12 @@ function overlay.new(config, prettyUILibrary)
             end)
             if not ok or not valid then
                 print("[task-guard] Target changed or overlay unavailable. " .. remove())
-            elseif refreshTooltipPosition and shield.isMouseOver then
+            elseif refreshTooltipPosition and (hovering or shield.isMouseOver
+                or (config.requirements and target.isMouseOver)) then
                 local positioned, err = pcall(refreshTooltipPosition)
+                if positioned and not tooltip and activateTooltip then
+                    positioned, err = pcall(activateTooltip)
+                end
                 if not positioned then
                     print("[task-guard] Tooltip positioning failed: " .. tostring(err) .. " | " .. remove())
                 end

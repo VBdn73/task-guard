@@ -77,9 +77,13 @@ function view.build(host, rules, pretty, columns, showGeneral)
             switch.value = enabled
             background.rgba = enabled and 0x23412DE8 or 0x492626E8
         end
-        local function toggle()
+        local function toggle(source)
             local old = preferences[name]
             preferences[name] = not old
+            if pageIndex == reaperIndex + 1 then
+                print("[task-guard] Slayer toggle via " .. source .. ": " .. name
+                    .. " " .. tostring(old) .. " -> " .. tostring(preferences[name]))
+            end
             if not settings.save(rules) then
                 preferences[name] = old
                 print("[task-guard] Could not save " .. name .. " setting.")
@@ -88,8 +92,8 @@ function view.build(host, rules, pretty, columns, showGeneral)
             layout()
             return false
         end
-        switch:Subscribe(ui.Hook.ONBUTTONPRESSED, toggle)
-        hitTarget:Subscribe(ui.Hook.ONBUTTONPRESSED, toggle)
+        switch:Subscribe(ui.Hook.ONBUTTONPRESSED, function() return toggle("checkbox") end)
+        hitTarget:Subscribe(ui.Hook.ONBUTTONPRESSED, function() return toggle("card") end)
         update()
         entries[#entries + 1] = { layer = layer, update = update, name = name, index = index }
     end

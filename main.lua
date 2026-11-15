@@ -9,12 +9,18 @@ local closeView
 local stopped = false
 local taskCount = #require("reaper-tasks")
 local overlay = require("reaper-guard").new(rules, prettyui)
+local slayerOverlay = require("slayer-guard").new(rules, prettyui)
 Event.MiniMenuReady.Subscribe(constants.EVENT_PREFIX .. ".menu", function(event)
     overlay.addMenu(event.miniMenu)
+    slayerOverlay.addMenu(event.miniMenu)
+end)
+Event.MiniMenuOpened.Subscribe(constants.EVENT_PREFIX .. ".slayerMenuOpened", function(event)
+    slayerOverlay.menuOpened(event.miniMenu)
 end)
 Event.Logic.Subscribe(constants.EVENT_PREFIX .. ".overlay", function()
     if stopped then return end
     overlay.update()
+    slayerOverlay.update()
     local count = #require("reaper-tasks")
     if count ~= taskCount then
         taskCount = count
@@ -67,10 +73,13 @@ function PluginShutdown()
     stopped = true
     Event.Logic.Unsubscribe(constants.EVENT_PREFIX .. ".overlay")
     Event.MiniMenuReady.Unsubscribe(constants.EVENT_PREFIX .. ".menu")
+    Event.MiniMenuOpened.Unsubscribe(constants.EVENT_PREFIX .. ".slayerMenuOpened")
     Event.SettingsLayerReady.Unsubscribe(constants.EVENT_PREFIX .. ".settings")
     Event.ContentLayerReady.Unsubscribe(constants.EVENT_PREFIX .. ".content")
     local ok, err = pcall(overlay.shutdown)
     if not ok then print("[task-guard] Could not shut down overlays: " .. tostring(err)) end
+    local slayerOK, slayerError = pcall(slayerOverlay.shutdown)
+    if not slayerOK then print("[task-guard] Could not shut down Slayer overlays: " .. tostring(slayerError)) end
     closeView("settings")
     closeView("content")
 end

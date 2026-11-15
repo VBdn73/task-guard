@@ -69,7 +69,8 @@ background = buttons[1]
 assert(made.enabled == true and made.clickthrough == false)
 assert(made.stylesheetID == -1, "Shield must not use animated button styling")
 assert(made.text.rgba == label.rgba, "Shield text must use the native label colour")
-assert(made.label == "Helwyr", "Shield must redraw readable text above the dark background")
+assert(made.label == "" and background.label == "Helwyr",
+    "Only disabled decoration should draw text; the enabled shield must not brighten text on click")
 -- The first button is the disabled decoration; the second is the input shield.
 assert(background.stylesheetID == 96 and background.enabled == false)
 assert(#artwork == 0, "Disabled rows must not allocate decorative sprites")
@@ -102,12 +103,13 @@ probe.update()
 assert(popup.options.x == 326 and popup.options.y == 244,
     "Moving the cursor must not move the tooltip")
 made.isMouseOver = false
+made.hooks[ui.Hook.ONMOUSELEAVE]()
 parent.scrollY = 301
 Mouse = { GetPosition = function() return { x = 0, y = 0 } end }
 for _ = 1, 5 do
     probe.update()
     assert(popup.options.y == 244, "Unhovered tooltips must not recalculate position")
-    assert(not popup.hidden, "Logic ticks must not override PrettyUI hover visibility")
+    assert(popup.hidden, "Logic ticks must not reopen a tooltip after mouse leave")
 end
 made.hooks[ui.Hook.ONMOUSELEAVE]()
 assert(popup.hidden, "PrettyUI mouse leave must hide the popup")
@@ -143,6 +145,7 @@ artwork = {}
 local requirementProbe = require("reaper-overlay").new({ name = "Helwyr", requirements = true,
     resolve = function() return label end })
 assert(requirementProbe.show():find("shown", 1, true))
+assert(tooltipCount == 1, "Requirement rows must not allocate tooltips at picker open")
 assert(made.clickthrough == false and made.enabled == true and made.label == "",
     "Requirements hover target must receive input without redrawing native text")
 assert(background == nil, "Preserve the native disabled background")
@@ -150,14 +153,23 @@ assert(#artwork == 0, "Requirements-only mode must preserve native artwork")
 assert(made.hooks[ui.Hook.ONBUTTONPRESSED]() == false,
     "Requirements hover target must consume clicks without selecting a task")
 made.hooks[ui.Hook.ONMOUSEOVER]()
+assert(tooltipCount == 1, "Requirement hover dispatch must defer tooltip attachment")
+made.isMouseOver = false
+requirementProbe.update()
+assert(requirementProbe.isMouseOver(), "Hover events must work even when the native mouse-over property stays false")
 assert(popup.options.text == "Blocked by requirements")
 assert(not popup.hidden)
-assert(tooltipCount == 2, "Requirement tooltips must also be allocated only on hover")
+assert(tooltipCount == 2, "Only the hovered requirement row should allocate a tooltip")
 made.isMouseOver = true
 requirementProbe.update()
 assert(not popup.hidden, "Requirement popup must remain available while hovered")
 made.hooks[ui.Hook.ONMOUSELEAVE]()
 assert(popup.hidden, "Leaving a requirement-blocked row must hide its popup")
+made.isMouseOver = false
+made.hooks[ui.Hook.ONMOUSEREPEAT]()
+requirementProbe.update()
+assert(not popup.hidden and popup.options.text == "Blocked by requirements",
+    "Requirement mouse-repeat events must show the same popup as Reaper hover")
 requirementProbe.remove()
 assert(made.dead and popup.dead)
 print("Task Guard overlay tests passed")

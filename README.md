@@ -7,8 +7,9 @@ Task Guard is intended to help prevent unwanted Slayer cape choices and Reaper's
 ## Current features
 
 - General, Reaper and Slayer settings tabs styled like Pre-flight Check, with two tasks per row, green enabled/red disabled backgrounds and checkboxes. Both task tabs offer independent saved preferences and Enable all/Disable all buttons.
-- Slayer settings use a bundled assignment catalogue from the RuneScape Wiki, with all tasks enabled by default. These are settings only: Slayer cape choices are not yet blocked or reordered, and native names/order still need client capture. Client default currently uses the alphabetical catalogue order for Slayer. Both sets of preferences are saved locally through PersistentDB.
-- The global Slayer catalogue covers all masters, cross-checked against the wiki's twelve master assignment tables as well as its overview. It includes Sanguine crawlers and Sanguine werewolves as separate tasks. Captured Laniakea names take precedence over wiki spelling; older saved spelling variants are migrated without losing disabled preferences. One Ravenous strigoi setting covers the known duplicate picker entries when native protection is added. The catalogue is bundled, not fetched over the network at runtime.
+- Slayer settings use a bundled assignment catalogue from the RuneScape Wiki, with all tasks enabled by default. Client default currently uses the alphabetical catalogue order for Slayer. Both sets of preferences are saved locally through PersistentDB.
+- The global Slayer catalogue covers all masters, cross-checked against the wiki's twelve master assignment tables as well as its overview. It includes Sanguine crawlers and Sanguine werewolves as separate tasks. Captured Laniakea names take precedence over wiki spelling; older saved spelling variants are migrated without losing disabled preferences. One Ravenous strigoi setting covers the known duplicate picker entries. The catalogue is bundled, not fetched over the network at runtime.
+- Experimental Slayer mouse shields use interface 201 and the exact title `Select your Slayer task`, with the shared Spria/Laniakea list structure. Known 230 × 20 rows overlapping the viewport with matching companion labels and complete captured background artwork receive shields; native clipping is expected to constrain partially visible shields and needs client verification. Both Ravenous strigoi rows use the same preference; other duplicate names and unknown layouts are left untouched. Native disabled backgrounds receive transparent requirement targets with pre-attached hover tooltips and no additional dimming. Right-click Enable/Disable actions save the global preference while retaining the native default choice; game-blocked rows do not offer these actions. Slayer native ordering remains unchanged. Click interception, clipping/scroll offsets, hover delivery and other masters still need client testing.
 - The plugin settings' General tab offers saved Client default/Alphabetical task ordering and an independent enabled-first toggle. The ribbon only shows Reaper and Slayer tabs, but uses the same ordering preferences. Both plugin task lists update immediately.
 - Client default in the plugin lists matches the native November 2026 picker sequence, read left-to-right across rows. Newly discovered tasks append to the catalogue. Saved enabled/disabled preferences are unchanged when the catalogue order changes.
 - Alphabetical ordering ignores a leading “The ” (e.g. The Ambassador sorts under A), while keeping the full displayed task names. This applies to settings, ribbon and native picker ordering.
@@ -49,6 +50,8 @@ lua tests/settings.lua
 lua tests/settings-view.lua
 lua tests/reaper-guard.lua
 lua tests/reaper-order.lua
+lua tests/slayer-guard.lua
+lua tests/slayer-catalogue.lua
 ```
 
 Mocks do not verify native rendering or click interception.
@@ -100,7 +103,7 @@ changelog.md                Version history
 
 ## Planned behaviour
 
-Verify multi-task mouse overlays, full hitboxes and alternative input routes, and integrate the saved Slayer preferences with a verified native Slayer picker adapter. Never automatically choose, accept, reroll or complete tasks. Leave unrelated interfaces and unknown choices unchanged. Do not modify the game's own block/prefer lists.
+Verify multi-task mouse overlays, Slayer picker compatibility across masters, full hitboxes and alternative input routes. Never automatically choose, accept, reroll or complete tasks. Leave unrelated interfaces and unknown choices unchanged. Do not modify the game's own block/prefer lists.
 
 ## Feedback and collaboration
 

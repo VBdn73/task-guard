@@ -91,6 +91,24 @@ at runtime rather than assuming every interface 201 instance is safe to modify.
 4. Verify clipping, scrolling, game-disabled visuals and native hitboxes before
    creating shields. Keep the global Slayer rules independent of Reaper rules.
 
-No Slayer native blocking or ordering has been implemented from this capture.
+`slayer-guard.lua` now implements experimental label-bounds mouse shields using
+the two-master structure. It validates the exact title and parent chain, companion
+labels and complete normal/hover/disabled background artwork, and requires each
+row to overlap the viewport after native scroll offsets. Partially visible rows
+retain shields as children of the native list, relying on its viewport clipping;
+fully hidden rows are removed. Shields are keyed by current
+component address with fresh native-identity/name checks (not raw Lua wrapper
+table keys); both Ravenous strigoi rows share the global rule. Native
+game-disabled rows use the existing transparent requirement target. Dialog
+closure, changed identities/layouts and shutdown remove owned shields. Slayer
+right-click Enable/Disable actions now share saved global preferences, with
+separate callback dispatch IDs and identity/requirements checks before saving.
+Native ordering remains unchanged. Native click
+interception, scroll-coordinate semantics, clipping and other input routes remain
+unverified; only test choices you are willing to receive.
+
+Run `lua tests/slayer-guard.lua` for mocked row, duplicate, requirements, clipping,
+master-change and shutdown coverage.
+
 The `CHOICE MATCHES: 0` summary is Reaper-specific (Helwyr / Pick a task) and
 does not indicate a failed Slayer capture; the title match found interface 201.
