@@ -19,6 +19,41 @@ function view.build(host, rules, pretty, columns, showGeneral, state)
     local tabs = pretty.Tabs.new(host, tabDefinitions, { width = 0, height = 0, widthAnchor = 1, heightAnchor = 1,
         contentLayout = { startY = 80 }, activeIndex = state.activeIndex or 1,
         onChange = function(_, index) state.activeIndex = index end })
+    local shortNames = { General = "Gen", Reaper = "Reap", Slayer = "Slay" }
+    local function measureTabText(text)
+        local ok, measured = pcall(function()
+            return config.Font.MUSEO_SANS_15PT_REGULAR:GetStringWidth(text, false)
+        end)
+        return ok and measured or #text * 7
+    end
+    local fullTabWidth = 2 * (#tabDefinitions - 1)
+    for _, definition in ipairs(tabDefinitions) do
+        fullTabWidth = fullTabWidth + math.max(90, math.floor(measureTabText(definition.text) + 24))
+    end
+    local function resizeTabs()
+        -- PrettyUI's text tabs have a fixed 90px minimum and no padding option.
+        -- Adjust only this view's tab surfaces; leave the shared library untouched.
+        if not tabs.GetTab then return end
+        local compact = host.width < fullTabWidth
+        local x = tabs.tabInset or 0
+        for index, definition in ipairs(tabDefinitions) do
+            local tab = tabs:GetTab(index)
+            local text = compact and shortNames[definition.text] or definition.text
+            local tabWidth = compact and math.max(60, math.ceil(measureTabText(text) + 16))
+                or math.max(90, math.floor(measureTabText(text) + 24))
+            tab.text = text
+            tab.label.content = text
+            tab.width = tabWidth
+            tab.visual:SetPos(x, 0)
+            tab.visual:SetSize(tabWidth, 60)
+            -- The native left sprite is 60px wide, overlapping the right cap
+            -- below 90px. Keep both caps within their own 30px sections.
+            tab.left:SetSize(compact and 30 or 60, 60)
+            tab.hit:SetPos(x, 0)
+            tab.hit:SetSize(tabWidth, 42)
+            x = x + tabWidth + (compact and 0 or 2)
+        end
+    end
     local generalPage = showGeneral and tabs:GetPage(1) or nil
     local function buildTaskPage(tasks, preferences, pageIndex)
     local page = tabs:GetPage(pageIndex)
@@ -348,6 +383,7 @@ function view.build(host, rules, pretty, columns, showGeneral, state)
         local resized = host.width ~= width or host.height ~= height
         if resized then
             width, height = host.width, host.height
+            resizeTabs()
             for i = 1, #tabDefinitions do tabs:GetPage(i)._scroll:Refresh() end
         end
         if showGeneral and active == 1 then updateGeneral() end

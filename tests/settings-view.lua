@@ -41,11 +41,16 @@ for _, kind in ipairs({ "Layer", "Rectangle", "Button", "Text", "Check", "InputF
 end
 local host = { width = 800, height = 240 }
 local pages, active, destroyed = {}, 1, false
-local definitions, tabOptions
+local definitions, tabOptions, tabControls
 local pretty = { Tabs = { new = function(_, defs, options)
     tabOptions = options
     active = options.activeIndex or 1
     definitions = defs
+    tabControls = {}
+    for i, definition in ipairs(defs) do
+        tabControls[i] = { text = definition.text, label = control(), visual = control(),
+            left = control(), hit = control() }
+    end
     pages = {}
      for i = 1, #defs do
         local page = { content = {}, contentHeight = 0 }
@@ -61,6 +66,7 @@ local pretty = { Tabs = { new = function(_, defs, options)
         pages[i] = page
     end
     return { GetPage = function(_, i) return pages[i] end,
+        GetTab = function(_, i) return tabControls[i] end,
         GetActiveIndex = function() return active end,
         Destroy = function() destroyed = true end }
 end } }
@@ -76,6 +82,7 @@ local rules = { reaper = {} }
 for _, name in ipairs(tasks) do rules.reaper[name] = true end
 local view = require("ui/settings-view")
 local refresh, destroy = view.build(host, rules, pretty, "auto")
+assert(tabControls[1].label.content == "General", "Wide views must retain full tab names")
 local function assertButtonColumns()
     local first = 1
     for _, button in ipairs(buttons) do
@@ -109,6 +116,22 @@ host.width = 520
 refresh()
 assertButtonColumns()
 assert(layers[1].size[3] == 1, "Scrollbar width must be included at a column threshold")
+host.width = 300
+refresh()
+host.width = 250
+refresh()
+assert(tabControls[1].label.content == "Gen" and tabControls[2].label.content == "Reap"
+    and tabControls[3].label.content == "Slay", "Narrow views must shorten all tab names")
+assert(tabControls[1].visual.size[1] == 60, "Compact tabs must remove the 90px minimum")
+assert(tabControls[1].left.size[1] == 30, "Compact left borders must not overlap the right corner")
+assert(tabControls[2].hit.pos[1] == tabControls[1].hit.size[1], "Compact tabs must have no gap")
+assert(tabControls[3].hit.pos[1] + tabControls[3].hit.size[1] <= host.width,
+    "All compact tabs must fit the narrow ribbon")
+host.width = 800
+refresh()
+assert(tabControls[1].label.content == "General" and tabControls[1].visual.size[1] >= 90,
+    "Growing the window must restore full names and normal widths")
+assert(tabControls[1].left.size[1] == 60, "Wide tabs must restore the native left border width")
 host.width = 300
 refresh()
 assert(dropdowns[1].root.pos[1] == 10 and dropdowns[1].root.pos[2] == 42,
