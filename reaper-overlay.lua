@@ -142,7 +142,7 @@ function overlay.new(config, prettyUILibrary)
                 local function ensureTooltip()
                     if not tooltip then
                         tooltip = pretty.Tooltip.attach(shield, popupHost, {
-                            text = config.requirements and "Blocked by requirements" or "Blocked by Task Guard plugin",
+                            text = config.tooltipText or (config.requirements and "Blocked by requirements" or "Blocked by Task Guard plugin"),
                             placement = "above", constrainToParent = false,
                         })
                         -- Keep our placement after PrettyUI's automatic hover
@@ -197,6 +197,15 @@ function overlay.new(config, prettyUILibrary)
                         localX, localY = c.x, c.y
                     end
                     geometry = current
+                end
+                if config.isHovered and shield.visibleGlobal then
+                    local cursorHover = config.isHovered()
+                    if cursorHover or (cursorHover == nil and hovering) or shield.isMouseOver or target.isMouseOver then
+                        activateTooltip()
+                    elseif cursorHover == false then
+                        hovering = false
+                        if tooltip then tooltip:Hide() end
+                    end
                 end
                 return shield.visibleGlobal
             end)

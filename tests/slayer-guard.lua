@@ -121,6 +121,22 @@ row("Cows", 248, 51, 18504)
 rules.slayer.Cows = true
 controller.update(); assert(made == 6 and entries[6].options.requirements,
     "Native blocked rows must use transparent requirement targets, not extra dimming")
+local blockedOptions = entries[6].options
+assert(blockedOptions.tooltipText:find("personal Slayer block list", 1, true))
+Mouse = { GetPosition = function() return { x = 350, y = 155 } end }
+assert(blockedOptions.isHovered(), "Native disabled rows need cursor-based hover detection")
+Mouse.GetPosition = function() return { x = 350, y = 180 } end
+assert(not blockedOptions.isHovered(), "Cursor fallback must stay within the task row")
+game = { options = { InterfaceScale = { setting = 150 } } }
+Mouse.GetPosition = function() return { x = 525, y = 232.5 } end
+assert(blockedOptions.isHovered(), "Raw cursor coordinates must be converted for interface scaling")
+game = nil
+Mouse.GetPosition = function() return { x = 0, y = 0 } end
+companion.children[#companion.children].isMouseOver = true
+controller.update()
+assert(blockedOptions.isHovered(), "The native companion label must also provide hover detection")
+companion.children[#companion.children].isMouseOver = false
+Mouse = nil
 local blockedMenu = menu(list.children[#list.children - 9])
 controller.addMenu(blockedMenu)
 assert(not blockedMenu.callback, "Native requirements must not offer toggles")
@@ -194,4 +210,28 @@ rebuiltMenu.callback(rebuiltMenu.taskID)
 assert(not rules.slayer[ascension.content] and not rules.slayer[camel.content],
     "A closing Ascension menu click must not enable Camel through a rebuilt hover action")
 dispatchGuard.shutdown()
+-- Captured native-blocked Dagannoth has no visible companion hit label.
+list.children, companion.children = {}, {}
+local dagannoth = row("Dagannoth", 8, 5, 18504)
+companion.children = {}
+row("Cave bugs", 248, 5)
+local blockedGuard = require("slayer-guard").new({ slayer = { Dagannoth = true } }, {})
+local before = made
+blockedGuard.update()
+assert(made == before + 1 and entries[#entries].options.name == "Dagannoth"
+    and entries[#entries].options.requirements,
+    "Complete native disabled rows must receive tooltips without companion labels")
+local nativeMenu = menu(dagannoth)
+blockedGuard.addMenu(nativeMenu)
+assert(not nativeMenu.callback, "Native blocks without companions must still reject preference toggles")
+blockedGuard.shutdown()
+-- Missing companions must not loosen matching for ordinary available rows.
+for _, c in ipairs(list.children) do
+    if c.type == 3 and c.x < 248 then c.spriteID = c.spriteID - 18504 + 18468 end
+end
+blockedGuard = require("slayer-guard").new({ slayer = { Dagannoth = false } }, {})
+before = made
+blockedGuard.update()
+assert(made == before, "Available rows must still require a visible companion label")
+blockedGuard.shutdown()
 print("Experimental Slayer guard tests passed")

@@ -89,7 +89,7 @@ function guard.new(rules, pretty)
             or not available(title.parent) or title.parent.parent ~= root
             or list.width ~= 480 or companion.width ~= 480 or viewport.width ~= 480
             or list.x ~= companion.x or list.y ~= companion.y then return {} end
-        local labels, sprites, empty, occurrences, distinct = {}, {}, {}, {}, 0
+        local labels, sprites, empty, companionLabels, occurrences, distinct = {}, {}, {}, {}, {}, 0
         list:IterateDynamicComponents(function(c)
             if available(c) and c.parent == list and not requirements.isOwned(c) then
                 requirements.capture(c, list, sprites)
@@ -106,6 +106,7 @@ function guard.new(rules, pretty)
                 and c.content == "" and c.width == 230 and c.height == 20 then
                 local key = c.x .. ":" .. c.y
                 empty[key] = (empty[key] or 0) + 1
+                companionLabels[key] = c
             end
             return false
         end)
@@ -136,13 +137,20 @@ function guard.new(rules, pretty)
         for _, c in ipairs(labels) do
             local name = c.content
             local rowSprites = spriteRows[c.x .. ":" .. c.y] or {}
+            local blocked = requirements.isBlocked(c, rowSprites)
+            local companionCount = empty[c.x .. ":" .. c.y]
             if known[name] and (occurrences[name] == 1 or name == "Ravenous strigoi")
                 and c.width == 230 and c.height == 20 and (c.x == 8 or c.x == 248)
                 and c.y >= 5 and (c.y - 5) % 23 == 0
-                and empty[c.x .. ":" .. c.y] == 1 and inside(c, viewport)
+                -- Native disabled rows can omit/hide their companion hit label.
+                -- Only complete disabled artwork permits that missing label;
+                -- available rows and ambiguous duplicate companions stay strict.
+                and (companionCount == 1 or (blocked and companionCount == nil))
+                and inside(c, viewport)
                 and validBackground(c, rowSprites) then
                 found[rowKey(c)] = { component = c, name = name,
-                    blocked = requirements.isBlocked(c, rowSprites), viewport = viewport }
+                    companion = companionLabels[c.x .. ":" .. c.y],
+                    blocked = blocked, viewport = viewport }
             end
         end
         return found
@@ -252,6 +260,30 @@ function guard.new(rules, pretty)
                         local name, viewport = row.name, row.viewport
                         entry = { component = row.component, name = name, blocked = row.blocked,
                             shield = factory.new({ name = name, requirements = row.blocked,
+                                tooltipText = row.blocked and "Blocked by in-game requirements or your personal Slayer block list" or nil,
+                                isHovered = row.blocked and function()
+                                    local current = matches[key]
+                                    if not current then return false end
+                                    local c = current.component
+                                    if c.isMouseOver or (current.companion and current.companion.isMouseOver) then return true end
+                                    local ok, mouse = pcall(function() return Mouse.GetPosition() end)
+                                    if not ok or not mouse then return nil end
+                                    local scale = (game and game.options and game.options.InterfaceScale
+                                        and tonumber(game.options.InterfaceScale.setting) or 100) / 100
+                                    if scale <= 0 then scale = 1 end
+                                    local mouseX, mouseY = mouse.x / scale, mouse.y / scale
+                                    local x, y = c.xyGlobal.x, c.xyGlobal.y
+                                    local ancestor = c.parent
+                                    while ancestor do
+                                        x, y = x - (ancestor.scrollX or 0), y - (ancestor.scrollY or 0)
+                                        ancestor = ancestor.parent
+                                    end
+                                    local origin = viewport.xyGlobal
+                                    return mouseX >= x and mouseX < x + c.width
+                                        and mouseY >= y and mouseY < y + c.height
+                                        and mouseX >= origin.x and mouseX < origin.x + viewport.width
+                                        and mouseY >= origin.y and mouseY < origin.y + viewport.height
+                                end or nil,
                                 resolve = function()
                                     local current = matches[key]
                                     local c = current and current.component

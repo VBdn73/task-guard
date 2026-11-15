@@ -172,4 +172,22 @@ assert(not popup.hidden and popup.options.text == "Blocked by requirements",
     "Requirement mouse-repeat events must show the same popup as Reaper hover")
 requirementProbe.remove()
 assert(made.dead and popup.dead)
+local cursorHovered = false
+local slayerProbe = require("reaper-overlay").new({ name = "Helwyr", requirements = true,
+    tooltipText = "Blocked by in-game requirements or your personal Slayer block list",
+    isHovered = function() return cursorHovered end, resolve = function() return label end })
+slayerProbe.show()
+slayerProbe.update()
+assert(tooltipCount == 2, "Unhovered native Slayer blocks must not allocate popups")
+cursorHovered = true
+slayerProbe.update()
+assert(not popup.hidden and popup.options.text:find("personal Slayer block list", 1, true),
+    "Cursor fallback must show the Slayer explanation without native hover events")
+cursorHovered = false
+slayerProbe.update()
+assert(popup.hidden, "Cursor fallback must hide the popup after leaving the row")
+cursorHovered = true
+slayerProbe.update()
+assert(not popup.hidden and tooltipCount == 3, "Returning to the row must reuse and reopen its popup")
+slayerProbe.remove()
 print("Task Guard overlay tests passed")
