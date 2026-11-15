@@ -46,7 +46,7 @@ openView = function(kind, host)
     closeView(kind)
     hosts[kind] = host
     local columns = kind == "settings" and 2 or "auto"
-    local ok, result, destroy = pcall(settingsView.build, host, rules, prettyui, columns)
+    local ok, result, destroy = pcall(settingsView.build, host, rules, prettyui, columns, kind == "settings")
     if ok then
         refreshViews[kind], destroyViews[kind] = result, destroy
     else

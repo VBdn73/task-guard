@@ -13,6 +13,7 @@ local function control(parent)
         Subscribe = function() end }
 end
 ui = { Hook = { ONSCROLLWHEEL = 1, ONBUTTONPRESSED = 2 }, AlignMode = { CENTRE = 1 } }
+ui.Margin = { new = function(...) return { ... } end }
 for _, kind in ipairs({ "Layer", "Rectangle", "Button", "Text", "Check" }) do
     ui[kind] = { new = function(parent)
         local result = control(parent)
@@ -22,9 +23,11 @@ for _, kind in ipairs({ "Layer", "Rectangle", "Button", "Text", "Check" }) do
 end
 local host = { width = 800, height = 240 }
 local pages, active, destroyed = {}, 1, false
-local pretty = { Tabs = { new = function()
+local definitions
+local pretty = { Tabs = { new = function(_, defs)
+    definitions = defs
     pages = {}
-    for i = 1, 2 do
+     for i = 1, #defs do
         local page = { content = {}, contentHeight = 0 }
         local function refresh()
             page.scrollbarVisible = page.contentHeight > host.height - 80
@@ -41,12 +44,14 @@ local pretty = { Tabs = { new = function()
         GetActiveIndex = function() return active end,
         Destroy = function() destroyed = true end }
 end } }
+pretty.ComboBox = dofile("tests/combo-box-mock.lua")(control)
+pretty.CheckboxButton = dofile("tests/checkbox-mock.lua")(control)
 local rules = { reaper = {} }
 for _, name in ipairs(tasks) do rules.reaper[name] = true end
 local view = require("settings-view")
 local refresh, destroy = view.build(host, rules, pretty, "auto")
 assert(layers[1].size[3] == 1 / 3, "Wide ribbon should fit three columns")
-assert(layers[4].pos[2] == 88 and pages[1].contentHeight == 136)
+assert(layers[4].pos[2] == 88 and pages[2].contentHeight == 136)
 host.width = 540
 refresh()
 assert(layers[1].size[3] == 1 / 2, "Resize should fit two columns")
@@ -59,10 +64,10 @@ assert(layers[2].pos[2] == 88, "Narrow ribbon should have one column")
 host.width = 1100
 refresh()
 assert(layers[1].size[3] == 1 / 4, "Growing the ribbon should add columns again")
-active = 2
+active = 3
 refresh()
 assert(layers[1].hidden)
-active = 1
+active = 2
 refresh()
 assert(not layers[1].hidden)
 destroy()
@@ -71,4 +76,16 @@ layers = {}
 view.build(host, rules, pretty, 2)
 assert(layers[1].size[3] == 1 / 2 and layers[2].pos[1] == 4,
     "Settings menu must retain its existing fixed layout")
+layers = {}
+active = 1
+rules.general.enabledFirst = true
+rules.reaper[tasks[1]] = false
+local refreshRibbon = view.build(host, rules, pretty, "auto", false)
+assert(#definitions == 2 and definitions[1].text == "Reaper" and definitions[2].text == "Slayer",
+    "Ribbon must not include General settings")
+assert(not layers[1].hidden and layers[1].pos[2] > layers[2].pos[2],
+    "Ribbon must still apply saved ordering preferences")
+active = 2
+refreshRibbon()
+assert(layers[1].hidden)
 print("Task Guard settings view tests passed")

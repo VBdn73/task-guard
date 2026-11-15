@@ -13,7 +13,7 @@ function settings.load()
         -- Legacy storage migration only. Runtime matching uses exact native names.
         local oldNames = { ["Telos, the Warden"] = "Telos",
             ["Black stone dragon"] = "Black Stone Dragon", ["Giant mole"] = "Giant Mole" }
-        local data = { reaper = {}, discovered = {} }
+        local data = { reaper = {}, discovered = {}, general = saved.general }
         if type(saved.reaper) == "table" then
             for name, value in pairs(saved.reaper) do
                 local native = oldNames[name] or name
@@ -28,7 +28,11 @@ function settings.load()
         saved = data
     end
     local reaper = ok and type(saved) == "table" and saved.reaper or nil
-    local rules = { reaper = {} }
+    local general = ok and type(saved) == "table" and saved.general or nil
+    local rules = { reaper = {}, general = {
+        taskOrder = type(general) == "table" and general.taskOrder == "alphabetical" and "alphabetical" or "default",
+        enabledFirst = type(general) == "table" and general.enabledFirst == true or false,
+    } }
     for _, name in ipairs(tasks) do
         -- Enabled means allowed. No unwanted tasks are configured by default.
         rules.reaper[name] = not (type(reaper) == "table" and reaper[name] == false)
@@ -51,7 +55,11 @@ function settings.load()
 end
 
 function settings.save(rules)
-    local data = { nameVersion = 2, reaper = {}, discovered = {} }
+    local general = rules.general or {}
+    local data = { nameVersion = 2, reaper = {}, discovered = {}, general = {
+        taskOrder = general.taskOrder == "alphabetical" and "alphabetical" or "default",
+        enabledFirst = general.enabledFirst == true,
+    } }
     for _, name in ipairs(tasks) do data.reaper[name] = rules.reaper[name] ~= false end
     -- Persist the complete catalogue so dynamically discovered names survive reloads.
     for _, name in ipairs(tasks) do data.discovered[#data.discovered + 1] = name end

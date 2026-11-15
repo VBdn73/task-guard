@@ -2,7 +2,10 @@ local tasks = require("reaper-tasks")
 local settings = require("task-settings")
 local view = {}
 
-function view.build(host, rules, pretty, columns)
+function view.build(host, rules, pretty, columns, showGeneral)
+    showGeneral = showGeneral ~= false
+    local reaperIndex = showGeneral and 2 or 1
+    rules.general = rules.general or { taskOrder = "default", enabledFirst = false }
     columns = columns or 2
     local automatic = columns == "auto"
     local minimumCardWidth = 0
@@ -15,12 +18,14 @@ function view.build(host, rules, pretty, columns)
         columns = 1
     end
     assert(pretty and pretty.Tabs and pretty.Tabs.new, "PrettyUI Tabs is required")
-    local tabs = pretty.Tabs.new(host, {
-        { text = "Reaper" }, { text = "Slayer" },
-    }, { width = 0, height = 0, widthAnchor = 1, heightAnchor = 1,
+    local tabDefinitions = { { text = "Reaper" }, { text = "Slayer" } }
+    if showGeneral then table.insert(tabDefinitions, 1, { text = "General" }) end
+    local tabs = pretty.Tabs.new(host, tabDefinitions, { width = 0, height = 0, widthAnchor = 1, heightAnchor = 1,
         contentLayout = { startY = 80 } })
-    local page = tabs:GetPage(1)
+    local generalPage = showGeneral and tabs:GetPage(1) or nil
+    local page = tabs:GetPage(reaperIndex)
     local entries = {}
+    local layout
     local function wheel(_, delta)
         if not page.scrollbarVisible then return true end
         page:ScrollBy(delta * 32)
@@ -66,12 +71,13 @@ function view.build(host, rules, pretty, columns)
                 print("[task-guard] Could not save " .. name .. " setting.")
             end
             update()
+            layout()
             return false
         end
         switch:Subscribe(ui.Hook.ONBUTTONPRESSED, toggle)
         hitTarget:Subscribe(ui.Hook.ONBUTTONPRESSED, toggle)
         update()
-        entries[#entries + 1] = { layer = layer, update = update }
+        entries[#entries + 1] = { layer = layer, update = update, name = name, index = index }
     end
     local function setAll(enabled)
         local old = {}
@@ -84,6 +90,7 @@ function view.build(host, rules, pretty, columns)
             print("[task-guard] Could not save all task settings.")
         end
         for _, entry in ipairs(entries) do entry.update() end
+        layout()
         return false
     end
     local allButtons = {}
@@ -97,7 +104,16 @@ function view.build(host, rules, pretty, columns)
         button:Subscribe(ui.Hook.ONBUTTONPRESSED, function() return setAll(action.enabled) end)
         allButtons[#allButtons + 1] = button
     end
-    local function layout()
+    layout = function()
+        table.sort(entries, function(a, b)
+            if rules.general.enabledFirst and rules.reaper[a.name] ~= rules.reaper[b.name] then
+                return rules.reaper[a.name] == true
+            end
+            if rules.general.taskOrder == "alphabetical" then
+                return a.name:lower() < b.name:lower()
+            end
+            return a.index < b.index
+        end)
         if automatic then
             local available = page._scroll.contentWidth or page.content.width
             -- Ten-pixel outside margins and six-pixel gaps between cards.
@@ -116,6 +132,62 @@ function view.build(host, rules, pretty, columns)
         end
         page:SetContentHeight(56 + math.ceil(#tasks / columns) * 40)
     end
+    local generalControls = {}
+    local updateGeneral
+    local dropdown
+    local enabledCheckbox
+    if showGeneral then
+    local function generalControl(kind, x, y, w, h)
+        local control = ui[kind].new(generalPage.content)
+        control:SetPos(x, y); control:SetSize(w, h)
+        generalControls[#generalControls + 1] = control
+        return control
+    end
+    local orderLabel = generalControl("Text", 10, 8, 80, 30)
+    orderLabel.font, orderLabel.content = id.Font.MUSEO_SANS_11PT_REGULAR, "Task order"
+    orderLabel.alignVertical, orderLabel.clickthrough = ui.AlignMode.CENTRE, true
+    assert(pretty.ComboBox and pretty.ComboBox.new, "PrettyUI ComboBox is required")
+    dropdown = pretty.ComboBox.new(generalPage.content, {
+        x = 95, y = 8, width = 250, height = 34,
+        -- PrettyUI's input text does not centre within the ComboBox height;
+        -- inset the 11pt text explicitly within this 34px field instead.
+        contentMargin = ui.Margin.new(8, 8, 4, 0),
+        font = id.Font.MUSEO_SANS_11PT_REGULAR,
+        entries = { { label = "Client default", id = 1, order = 1 },
+            { label = "Alphabetical", id = 2, order = 2 } },
+        selectedID = rules.general.taskOrder == "alphabetical" and 2 or 1,
+    })
+    generalControls[#generalControls + 1] = dropdown.root
+    assert(pretty.CheckboxButton and pretty.CheckboxButton.new, "PrettyUI CheckboxButton is required")
+    enabledCheckbox = pretty.CheckboxButton.new(generalPage.content, {
+        { text = "Sort enabled tasks first", value = "enabledFirst", selected = rules.general.enabledFirst },
+    }, { x = 10, y = 50, width = 360 })
+    enabledCheckbox.items[1].label.font = id.Font.MUSEO_SANS_11PT_REGULAR
+    generalControls[#generalControls + 1] = enabledCheckbox.root
+    updateGeneral = function()
+        local selectedID = rules.general.taskOrder == "alphabetical" and 2 or 1
+        if dropdown:GetSelectedID() ~= selectedID then dropdown:Select(selectedID, false) end
+        enabledCheckbox:SetSelected("enabledFirst", rules.general.enabledFirst, false)
+    end
+    local function saveGeneral(key, value)
+        local old = rules.general[key]
+        rules.general[key] = value
+        if not settings.save(rules) then
+            rules.general[key] = old
+            print("[task-guard] Could not save task ordering setting.")
+        end
+        updateGeneral()
+        layout()
+        return false
+    end
+    enabledCheckbox.onChange = function(_, _, _, selected)
+        return saveGeneral("enabledFirst", selected)
+    end
+    dropdown.onChange = function(_, entryID)
+        return saveGeneral("taskOrder", entryID == 2 and "alphabetical" or "default")
+    end
+    generalPage:SetContentHeight(90)
+    end
     local width, height, contentWidth, active
     local function refresh()
         assert(not host.isRestricted, "Settings host is no longer available")
@@ -123,13 +195,16 @@ function view.build(host, rules, pretty, columns)
         local selected = tabs:GetActiveIndex()
         if selected ~= active then
             active = selected
-            for _, entry in ipairs(entries) do entry.layer.hidden = active ~= 1 end
-            for _, button in ipairs(allButtons) do button.hidden = active ~= 1 end
+            for _, entry in ipairs(entries) do entry.layer.hidden = active ~= reaperIndex end
+            for _, button in ipairs(allButtons) do button.hidden = active ~= reaperIndex end
+            for _, control in ipairs(generalControls) do control.hidden = active ~= 1 end
         end
+        if showGeneral and active == 1 then updateGeneral() end
         for _, entry in ipairs(entries) do entry.update() end
+        layout()
         if host.width ~= width or host.height ~= height then
             width, height = host.width, host.height
-            for i = 1, 2 do tabs:GetPage(i)._scroll:Refresh() end
+            for i = 1, #tabDefinitions do tabs:GetPage(i)._scroll:Refresh() end
             layout()
         end
         local available = page._scroll.contentWidth or page.content.width
@@ -141,7 +216,11 @@ function view.build(host, rules, pretty, columns)
         end
     end
     refresh()
-    return refresh, function() tabs:Destroy() end
+    return refresh, function()
+        if dropdown then dropdown:Destroy() end
+        if enabledCheckbox then enabledCheckbox:Destroy() end
+        tabs:Destroy()
+    end
 end
 
 return view

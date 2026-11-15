@@ -6,7 +6,8 @@ Task Guard is intended to help prevent unwanted Slayer cape choices and Reaper's
 
 ## Current features
 
-- Reaper and Slayer settings tabs styled like Pre-flight Check, with two Reaper tasks per row, green enabled/red disabled backgrounds and checkboxes. Slayer is empty for now.
+- General, Reaper and Slayer settings tabs styled like Pre-flight Check, with two Reaper tasks per row, green enabled/red disabled backgrounds and checkboxes. Slayer is empty for now.
+- The plugin settings' General tab offers saved Client default/Alphabetical task ordering and an independent enabled-first toggle. The ribbon only shows Reaper and Slayer tabs, but uses the same ordering preferences. Both task lists update immediately; the game's own task picker is unchanged.
 - Saved Reaper preferences (enabled means allowed; all tasks are allowed by default). Disabled tasks receive automatic overlays when uniquely resolved in the captured Reaper choice list.
 - Ribbon task toggles using the same saved preferences, with responsive columns sized to fit the longest boss name and checkbox.
 - Side-by-side Enable all and Disable all buttons in the Reaper settings and ribbon menus. Changes are saved together.
