@@ -226,12 +226,32 @@ function guard.new(rules, pretty)
                     print("[task-guard] Could not save " .. selected .. " Slayer setting.")
                 end
             end, taskID)
-            -- Add appends at the highest-priority (default left-click) position.
-            -- Move BEFORE Cancel, not after it: a shield may leave only Cancel
-            -- and our toggle, so "after Cancel" makes Enable the default action.
-            -- Use the documented append index; entries can be a stale snapshot.
-            local actionIndex = menu.entryCount or (beforeCount + 1)
-            local destination = cancelIndex or 1
+            -- Locate the added action rather than assuming Add appends: clients
+            -- may insert it at the front. Swapping from an assumed append index
+            -- then moves native Choose away from the left-click default.
+            -- Keep the toggle before Cancel, including Cancel-only shield menus.
+            local actionIndex, currentCancel
+            for index, entry in ipairs(menu.entries) do
+                if entry.overrideText == text or entry.fullText == text
+                    or entry.verbText == text or entry.label == text then actionIndex = index end
+                if entry.verbText == "Cancel"
+                    or (MiniMenuActionType and entry.actionType == MiniMenuActionType.CANCEL) then
+                    currentCancel = index
+                end
+            end
+            -- Retain the append fallback for clients exposing a stale snapshot.
+            local destination
+            if actionIndex then
+                destination = currentCancel or 1
+                if currentCancel and actionIndex < currentCancel then destination = currentCancel - 1 end
+            else
+                actionIndex = menu.entryCount or (beforeCount + 1)
+                destination = cancelIndex or 1
+            end
+            while actionIndex < destination do
+                menu:Swap(actionIndex, actionIndex + 1)
+                actionIndex = actionIndex + 1
+            end
             while actionIndex > destination do
                 menu:Swap(actionIndex - 1, actionIndex)
                 actionIndex = actionIndex - 1

@@ -79,6 +79,17 @@ controller.update(); assert(removed == 1)
 local action = menu(birds)
 controller.addMenu(action)
 assert(action.entries[1].overrideText == "Disable task" and action.entries[3].verbText == "Choose")
+local prepended = menu(birds)
+function prepended:Add(text, callback, taskID)
+    self.callback, self.taskID = callback, taskID
+    table.insert(self.entries, 1, { overrideText = text })
+end
+controller.addMenu(prepended)
+assert(prepended.entries[1].overrideText == "Disable task"
+    and prepended.entries[2].verbText == "Cancel" and prepended.entries[3].verbText == "Choose",
+    "Front-inserted plugin actions must preserve native Choose as the left-click default")
+action = menu(birds)
+controller.addMenu(action)
 action.callback(action.taskID)
 assert(rules.slayer.Birds, "Hover/left-click menu actions must never toggle preferences")
 controller.menuOpened(action)
