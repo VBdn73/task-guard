@@ -4,6 +4,7 @@ local rules = require("task-settings").load()
 local refreshViews = {}
 local destroyViews = {}
 local hosts = {}
+local viewStates = { settings = {}, content = {} }
 local openView
 local closeView
 local stopped = false
@@ -52,7 +53,7 @@ openView = function(kind, host)
     closeView(kind)
     hosts[kind] = host
     local columns = kind == "settings" and 2 or "auto"
-    local ok, result, destroy = pcall(settingsView.build, host, rules, prettyui, columns, kind == "settings")
+    local ok, result, destroy = pcall(settingsView.build, host, rules, prettyui, columns, kind == "settings", viewStates[kind])
     if ok then
         refreshViews[kind], destroyViews[kind] = result, destroy
     else

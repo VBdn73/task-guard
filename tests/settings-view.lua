@@ -29,8 +29,10 @@ for _, kind in ipairs({ "Layer", "Rectangle", "Button", "Text", "Check" }) do
 end
 local host = { width = 800, height = 240 }
 local pages, active, destroyed = {}, 1, false
-local definitions
-local pretty = { Tabs = { new = function(_, defs)
+local definitions, tabOptions
+local pretty = { Tabs = { new = function(_, defs, options)
+    tabOptions = options
+    active = options.activeIndex or 1
     definitions = defs
     pages = {}
      for i = 1, #defs do
@@ -119,7 +121,8 @@ layers = {}
 active = 1
 rules.general.enabledFirst = true
 rules.reaper[tasks[1]] = false
-local refreshRibbon = view.build(host, rules, pretty, "auto", false)
+local ribbonState = {}
+local refreshRibbon = view.build(host, rules, pretty, "auto", false, ribbonState)
 assert(#definitions == 2 and definitions[1].text == "Reaper" and definitions[2].text == "Slayer",
     "Ribbon must not include General settings")
 assert(not layers[1].hidden and layers[1].pos[2] > layers[2].pos[2],
@@ -128,6 +131,20 @@ rules.reaper[tasks[1]] = true
 refreshRibbon()
 assert(layers[1].pos[2] == 48, "Shared enabled-first changes must trigger layout")
 active = 2
+tabOptions.onChange(nil, 2)
+assert(ribbonState.activeIndex == 2, "Tab clicks must immediately remember Slayer before a resize")
 refreshRibbon()
 assert(layers[1].hidden)
+host.width = 540
+refreshRibbon()
+assert(active == 2 and layers[1].hidden and not layers[#tasks + 1].hidden,
+    "Shrinking the ribbon must keep the Slayer tab selected")
+host.width, host.height = 1100, 400
+refreshRibbon()
+assert(active == 2 and layers[1].hidden and not layers[#tasks + 1].hidden,
+    "Growing the ribbon must keep the Slayer tab selected")
+layers = {}
+view.build(host, rules, pretty, "auto", false, ribbonState)
+assert(active == 2 and layers[1].hidden and not layers[#tasks + 1].hidden,
+    "Rebuilding cleared ribbon components must restore the Slayer tab")
 print("Task Guard settings view tests passed")

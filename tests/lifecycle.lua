@@ -47,7 +47,16 @@ function ui.Text.new(host)
     }
 end
 ui.Button.new = ui.Text.new
-package.loaded["settings-view"] = { build = function(host)
+local ribbonState
+package.loaded["settings-view"] = { build = function(host, _, _, _, showGeneral, state)
+    if not showGeneral then
+        if ribbonState then
+            assert(state == ribbonState and state.activeIndex == 2,
+                "Ribbon rebuilds must retain their selected tab state")
+        end
+        ribbonState = state
+        state.activeIndex = 2
+    end
     local control = ui.Text.new(host)
     return function() assert(not refreshFails, "Disposed host") end, function() control:Destroy() end
 end }
@@ -60,8 +69,14 @@ handlers[1]["taskGuard.settings"]({ component = host })
 handlers[2]["taskGuard.content"]({ component = host })
 assert(created == 2 and destroyed == 0)
 
+host.width, host.height = 540, 300
+handlers[2]["taskGuard.content"]({ component = host })
+assert(created == 3 and destroyed == 1, "Ribbon resize must recreate cleared components")
+handlers[2]["taskGuard.content"]({ component = {} })
+assert(created == 4 and destroyed == 2, "A replacement ribbon host must rebuild the view")
+
 handlers[1]["taskGuard.settings"]({ component = host })
-assert(created == 3 and destroyed == 1, "Reopening must clean up the old view")
+assert(created == 5 and destroyed == 3, "Reopening must clean up the old view")
 
 refreshFails = true
 handlers[3]["taskGuard.overlay"]()
@@ -80,6 +95,7 @@ for _, callbacks in ipairs(handlers) do
 end
 
 for _ = 1, 3 do
+    ribbonState = nil
     dofile("main.lua")
     handlers[1]["taskGuard.settings"]({ component = host })
     handlers[2]["taskGuard.content"]({ component = host })

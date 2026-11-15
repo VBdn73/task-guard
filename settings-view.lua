@@ -4,7 +4,8 @@ local settings = require("task-settings")
 local taskOrder = require("task-order")
 local view = {}
 
-function view.build(host, rules, pretty, columns, showGeneral)
+function view.build(host, rules, pretty, columns, showGeneral, state)
+    state = state or {}
     showGeneral = showGeneral ~= false
     local reaperIndex = showGeneral and 2 or 1
     rules.general = rules.general or { taskOrder = "default", enabledFirst = false }
@@ -12,7 +13,8 @@ function view.build(host, rules, pretty, columns, showGeneral)
     local tabDefinitions = { { text = "Reaper" }, { text = "Slayer" } }
     if showGeneral then table.insert(tabDefinitions, 1, { text = "General" }) end
     local tabs = pretty.Tabs.new(host, tabDefinitions, { width = 0, height = 0, widthAnchor = 1, heightAnchor = 1,
-        contentLayout = { startY = 80 } })
+        contentLayout = { startY = 80 }, activeIndex = state.activeIndex or 1,
+        onChange = function(_, index) state.activeIndex = index end })
     local generalPage = showGeneral and tabs:GetPage(1) or nil
     local function buildTaskPage(tasks, preferences, pageIndex)
     local page = tabs:GetPage(pageIndex)
@@ -298,6 +300,7 @@ function view.build(host, rules, pretty, columns, showGeneral)
         assert(not host.isRestricted, "Settings host is no longer available")
         if host.visibleGlobal == false then return end
         local selected = tabs:GetActiveIndex()
+        state.activeIndex = selected
         if selected ~= active then
             active = selected
             for _, control in ipairs(generalControls) do control.hidden = active ~= 1 end
