@@ -8,22 +8,34 @@ id = { Font = { MUSEO_SANS_11PT_REGULAR = 1 }, StyleSheet = { CHECKBOX_DEFAULT =
 config = { Font = { FromID = function()
     return { GetStringWidth = function(_, name) return name == tasks[2] and 200 or #name * 7 end }
 end } }
-local layers, labels, buttons = {}, {}, {}
+local layers, labels, buttons, inputs = {}, {}, {}, {}
 local function control(parent)
     return { parent = parent, SetPos = function(self, ...)
             self.pos = { ... }; self.positionWrites = (self.positionWrites or 0) + 1
         end,
         SetSize = function(self, ...) self.size = { ... } end,
-        Subscribe = function() end }
+        Subscribe = function(self, hook, name, callback)
+            self.callbacks = self.callbacks or {}
+            self.callbacks[hook] = callback or name
+        end, Setup = function() end }
 end
 ui = { Hook = { ONSCROLLWHEEL = 1, ONBUTTONPRESSED = 2 }, AlignMode = { CENTRE = 1 } }
 ui.Margin = { new = function(...) return { ... } end }
-for _, kind in ipairs({ "Layer", "Rectangle", "Button", "Text", "Check" }) do
+ui.TextContentVisibilityMode = { VISIBLE = 1 }
+ui.InputFieldFilterMode = { NONE = 1 }
+for _, kind in ipairs({ "Layer", "Rectangle", "Button", "Text", "Check", "InputField" }) do
     ui[kind] = { new = function(parent)
         local result = control(parent)
         if kind == "Layer" then layers[#layers + 1] = result end
         if kind == "Text" then labels[#labels + 1] = result end
         if kind == "Button" then buttons[#buttons + 1] = result end
+        if kind == "InputField" then inputs[#inputs + 1] = result end
+        if kind == "InputField" then
+            setmetatable(result, { __newindex = function(self, key, value)
+                assert(key ~= "font", "Native InputField does not expose a font property")
+                rawset(self, key, value)
+            end })
+        end
         return result
     end }
 end
@@ -75,7 +87,7 @@ assert(information.content:find("does not block", 1, true), "General tab must ex
 assert(information.content:gsub("<br>", " "):find("accidental clicks", 1, true),
     "General tab must explain accidental-click protection")
 assert(layers[1].size[3] == 1 / 3, "Wide ribbon should fit three columns")
-assert(layers[4].pos[2] == 88 and pages[2].contentHeight == 136)
+assert(layers[4].pos[2] == 126 and pages[2].contentHeight == 174)
 local writes = layers[1].positionWrites
 for _ = 1, 10 do refresh() end
 assert(layers[1].positionWrites == writes, "Idle view refreshes must not relayout cards")
@@ -94,13 +106,21 @@ assert(layers[1].size[3] == 1, "Scrollbar width must be included at a column thr
 host.width = 300
 refresh()
 assertButtonColumns()
-assert(layers[2].pos[2] == 122, "Narrow ribbon should have one column below stacked buttons")
+assert(layers[2].pos[2] == 160, "Narrow settings should have one column below stacked buttons")
 assert(buttons[#tasks + 1].pos[2] == 8 and buttons[#tasks + 2].pos[2] == 42,
     "Single-column bulk buttons must stack without overlapping")
+assert(inputs[1].pos[2] == 81, "Single-column search must sit below both bulk buttons")
 host.width = 1100
 refresh()
 assertButtonColumns()
 assert(layers[1].size[3] == 1 / 4, "Growing the ribbon should add columns again")
+local cardWidth = pages[2]._scroll.contentWidth / 4 + layers[1].size[1]
+local secondCardRight = layers[2].pos[1] + layers[2].pos[3] * pages[2]._scroll.contentWidth + cardWidth
+assert(inputs[1].pos[1] + inputs[1].size[1] == secondCardRight,
+    "Search must align exactly with the right edge of the second task column")
+assert(inputs[1].pos[2] - (buttons[#tasks + 1].pos[2] + 30)
+    == layers[1].pos[2] - (inputs[1].pos[2] + 30),
+    "Search must have equal spacing above and below")
 active = 3
 refresh()
 assert(layers[1].hidden)
@@ -109,6 +129,36 @@ assert(not layers[#tasks + 1].hidden and pages[3].contentHeight > 0,
 active = 2
 refresh()
 assert(not layers[1].hidden)
+assert(#inputs == 2, "Settings must have separate Reaper and Slayer search fields")
+inputs[1].content = "  LONGEST  "
+refresh()
+assert(layers[1].hidden and not layers[2].hidden and layers[3].hidden,
+    "Search must filter case-insensitively and trim whitespace")
+assert(layers[2].pos[2] == 86, "Search results must pack into the first row")
+buttons[#tasks + 2].callbacks[ui.Hook.ONBUTTONPRESSED]()
+assert(not rules.reaper[tasks[2]] and rules.reaper[tasks[1]] and rules.reaper[tasks[3]],
+    "Disable all must only change search matches")
+buttons[#tasks + 1].callbacks[ui.Hook.ONBUTTONPRESSED]()
+assert(rules.reaper[tasks[2]], "Enable all must restore matching tasks")
+inputs[1].content = "no match"
+buttons[#tasks + 2].callbacks[ui.Hook.ONBUTTONPRESSED]()
+for _, name in ipairs(tasks) do assert(rules.reaper[name], "No matches must leave preferences unchanged") end
+inputs[1].content = "  LONGEST  "
+active = 3
+refresh()
+assert(not layers[#tasks + 1].hidden, "Reaper search must not filter Slayer")
+inputs[2].content = "no match"
+refresh()
+assert(layers[#tasks + 1].hidden and layers[#tasks + 2].hidden,
+    "Unmatched searches must hide all task cards")
+active = 2
+inputs[1].content = ""
+refresh()
+assert(not layers[1].hidden and not layers[3].hidden, "Clearing search must restore tasks")
+buttons[#tasks + 2].callbacks[ui.Hook.ONBUTTONPRESSED]()
+for _, name in ipairs(tasks) do assert(not rules.reaper[name], "Empty search must disable everything") end
+buttons[#tasks + 1].callbacks[ui.Hook.ONBUTTONPRESSED]()
+for _, name in ipairs(tasks) do assert(rules.reaper[name], "Empty search must enable everything") end
 destroy()
 assert(destroyed)
 layers = {}
@@ -122,14 +172,17 @@ active = 1
 rules.general.enabledFirst = true
 rules.reaper[tasks[1]] = false
 local ribbonState = {}
+local inputCount = #inputs
 local refreshRibbon = view.build(host, rules, pretty, "auto", false, ribbonState)
+assert(#inputs == inputCount + 2, "Ribbon must have separate Reaper and Slayer search fields")
+assert(inputs[#inputs - 1].pos[2] == 47, "Search must sit below the bulk buttons")
 assert(#definitions == 2 and definitions[1].text == "Reaper" and definitions[2].text == "Slayer",
     "Ribbon must not include General settings")
 assert(not layers[1].hidden and layers[1].pos[2] > layers[2].pos[2],
     "Ribbon must still apply saved ordering preferences")
 rules.reaper[tasks[1]] = true
 refreshRibbon()
-assert(layers[1].pos[2] == 48, "Shared enabled-first changes must trigger layout")
+assert(layers[1].pos[2] == 86, "Shared enabled-first changes must trigger layout")
 active = 2
 tabOptions.onChange(nil, 2)
 assert(ribbonState.activeIndex == 2, "Tab clicks must immediately remember Slayer before a resize")

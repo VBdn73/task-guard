@@ -32,6 +32,20 @@ function view.build(host, rules, pretty, columns, showGeneral, state)
     end
     local entries = {}
     local layout
+    local query = ""
+    local activePage
+    local searchHeight = 38
+    local search = ui.InputField.new(page.content)
+    search.stylesheetID = id.StyleSheet.INPUT_DEFAULT
+    search:Setup(ui.TextContentVisibilityMode.VISIBLE, ui.InputFieldFilterMode.NONE, 100)
+    search.content = ""
+    search.emptyText = "Search " .. tabDefinitions[pageIndex].text .. " tasks..."
+    local function searchQuery()
+        return (search.content or ""):lower():match("^%s*(.-)%s*$")
+    end
+    local function matchesSearch(name, text)
+        return name:lower():find(text, 1, true) ~= nil
+    end
     local lastOrderKey
     local function orderKey()
         local parts = { rules.general.taskOrder, tostring(rules.general.enabledFirst) }
@@ -99,12 +113,16 @@ function view.build(host, rules, pretty, columns, showGeneral, state)
     end
     local function setAll(enabled)
         local old = {}
+        local currentQuery = searchQuery()
         for _, name in ipairs(tasks) do
-            old[name] = preferences[name]
-            preferences[name] = enabled
+            if matchesSearch(name, currentQuery) then
+                old[name] = preferences[name]
+                preferences[name] = enabled
+            end
         end
+        if next(old) == nil then return false end
         if not settings.save(rules) then
-            for _, name in ipairs(tasks) do preferences[name] = old[name] end
+            for name, value in pairs(old) do preferences[name] = value end
             print("[task-guard] Could not save all task settings.")
         end
         for _, entry in ipairs(entries) do entry.update() end
@@ -121,6 +139,7 @@ function view.build(host, rules, pretty, columns, showGeneral, state)
         allButtons[#allButtons + 1] = button
     end
     layout = function()
+        local visibleEntries = {}
         table.sort(entries, function(a, b)
             if rules.general.enabledFirst and preferences[a.name] ~= preferences[b.name] then
                 return preferences[a.name] == true
@@ -133,6 +152,11 @@ function view.build(host, rules, pretty, columns, showGeneral, state)
             end
             return a.index < b.index
         end)
+        for _, entry in ipairs(entries) do
+            entry.matches = matchesSearch(entry.name, query)
+            entry.layer.hidden = activePage ~= pageIndex or not entry.matches
+            if entry.matches then visibleEntries[#visibleEntries + 1] = entry end
+        end
         local available = page._scroll.contentWidth or page.content.width
         if automatic then
             -- Ten-pixel outside margins and six-pixel gaps between cards.
@@ -140,6 +164,11 @@ function view.build(host, rules, pretty, columns, showGeneral, state)
         end
         local cardWidth = automatic and (available - 14) / columns - 6
             or available / columns - (columns == 1 and 20 or 14)
+        local searchColumns = math.min(2, columns)
+        local columnGap = automatic and 6 + 20 / columns or 8
+        local searchY = columns == 1 and 81 or 47
+        search:SetPos(10, searchY)
+        search:SetSize(searchColumns * cardWidth + (searchColumns - 1) * columnGap, 30)
         local function placeColumn(control, column, y, height)
             if automatic then
                 control:SetPos(10 + column * 6 / columns, y, column / columns, 0)
@@ -154,7 +183,7 @@ function view.build(host, rules, pretty, columns, showGeneral, state)
                 8 + math.floor((index - 1) / columns) * 34, 30)
         end
         local heights = {}
-        for index, entry in ipairs(entries) do
+        for index, entry in ipairs(visibleEntries) do
             local lines, line = {}, ""
             for word in entry.name:gmatch("%S+") do
                 local candidate = line == "" and word or line .. " " .. word
@@ -169,8 +198,8 @@ function view.build(host, rules, pretty, columns, showGeneral, state)
             local row = math.floor((index - 1) / columns) + 1
             heights[row] = math.max(heights[row] or 36, #lines * 18 + 4)
         end
-        local y = columns == 1 and 82 or 48
-        for index, entry in ipairs(entries) do
+        local y = searchY + searchHeight + 1
+        for index, entry in ipairs(visibleEntries) do
             local column = (index - 1) % columns
             local row = math.floor((index - 1) / columns) + 1
             local height = heights[row]
@@ -180,19 +209,24 @@ function view.build(host, rules, pretty, columns, showGeneral, state)
             entry.label:SetSize(-46, height - 4, 1, 0)
             entry.switch:SetPos(-30, (height - 22) / 2, 1, 0)
             placeColumn(entry.layer, column, y, height)
-            if column == columns - 1 or index == #entries then y = y + height + 4 end
+            if column == columns - 1 or index == #visibleEntries then y = y + height + 4 end
         end
         page:SetContentHeight(y + 8)
         lastOrderKey = orderKey()
     end
     local contentWidth
     return { layout = layout, refresh = function(active, resized)
+        activePage = active
+        search.hidden = active ~= pageIndex
+        local nextQuery = searchQuery()
+        local searchChanged = nextQuery ~= query
+        query = nextQuery
         for _, entry in ipairs(entries) do
-            entry.layer.hidden = active ~= pageIndex
+            entry.layer.hidden = active ~= pageIndex or entry.matches == false
             entry.update()
         end
         for _, button in ipairs(allButtons) do button.hidden = active ~= pageIndex end
-        if resized or orderKey() ~= lastOrderKey then layout() end
+        if resized or searchChanged or orderKey() ~= lastOrderKey then layout() end
         local available = page._scroll.contentWidth or page.content.width
         if available ~= contentWidth then
             layout()

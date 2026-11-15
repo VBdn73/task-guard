@@ -40,13 +40,16 @@ local function control(parent)
     local c = { parent = parent, callbacks = {} }
     function c:SetPos(x, y, ax) self.x, self.y, self.ax = x, y, ax end
     function c:SetSize() end
+    function c:Setup() end
     function c:Subscribe(hook, name, callback) self.callbacks[hook] = callback or name end
     controls[#controls + 1] = c
     return c
 end
 ui = { Hook = { ONBUTTONPRESSED = 1, ONSCROLLWHEEL = 2 }, AlignMode = { CENTRE = 1 } }
 ui.Margin = { new = function(...) return { ... } end }
-for _, kind in ipairs({ "Layer", "Rectangle", "Text", "Check", "Button" }) do ui[kind] = { new = control } end
+ui.TextContentVisibilityMode = { VISIBLE = 1 }
+ui.InputFieldFilterMode = { NONE = 1 }
+for _, kind in ipairs({ "Layer", "Rectangle", "Text", "Check", "Button", "InputField" }) do ui[kind] = { new = control } end
 id = { Font = { MUSEO_SANS_11PT_REGULAR = 1 }, StyleSheet = { CHECKBOX_DEFAULT = 1, BUTTON_DEFAULT = 2 } }
 local active, destroyed = 1, false
 local pretty = { Tabs = { new = function(_, defs)
@@ -59,10 +62,10 @@ end } }
 pretty.ComboBox = require("tests/support/combo-box-mock")(control)
 pretty.CheckboxButton = require("tests/support/checkbox-mock")(control)
 local refresh, destroy = require("ui/settings-view").build({ width = 800, height = 600 }, rules, pretty)
-assert(#controls == (#tasks + #slayerTasks) * 6 + 9, "Unexpected controls: " .. #controls)
-assert(controls[1].y == controls[7].y and controls[7].ax == 0.5)
-assert(controls[13].y == controls[1].y + 40)
-local slayerStart = #tasks * 6 + 3
+assert(#controls == (#tasks + #slayerTasks) * 6 + 11, "Unexpected controls: " .. #controls)
+assert(controls[2].y == controls[8].y and controls[8].ax == 0.5)
+assert(controls[14].y == controls[2].y + 40)
+local slayerStart = #tasks * 6 + 5
 assert(controls[slayerStart].parent == pages[3].content)
 local slayerSwitch = controls[slayerStart + 5]
 assert(not slayerSwitch.value)
@@ -80,13 +83,13 @@ slayerSwitch.callbacks[1]()
 assert(not slayerSwitch.value and not rules.slayer[slayerTasks[1]], "Failed Slayer saves must roll back")
 fail = false
 slayerEnable.callbacks[1]()
-local background, switch, hitTarget = controls[3], controls[6], controls[4]
+local background, switch, hitTarget = controls[4], controls[7], controls[5]
 assert(background.rgba == 0x23412DE8 and switch.value)
 switch.callbacks[1]()
 assert(not rules.reaper[tasks[1]] and not switch.value and background.rgba == 0x492626E8)
 assert(hitTarget.callbacks[1]() == false)
 assert(rules.reaper[tasks[1]] and switch.value and background.rgba == 0x23412DE8)
-local enableAll, allButton = controls[#tasks * 6 + 1], controls[#tasks * 6 + 2]
+local enableAll, allButton = controls[#tasks * 6 + 2], controls[#tasks * 6 + 3]
 assert(enableAll.label == "Enable all" and enableAll.y == allButton.y)
 assert(enableAll.ax == 0 and allButton.ax == 0.5)
 assert(allButton.label == "Disable all")
@@ -102,7 +105,7 @@ fail = true
 allButton.callbacks[1]()
 assert(not rules.reaper[tasks[1]] and rules.reaper[tasks[2]], "Failed bulk saves must restore mixed preferences")
 assert(allButton.label == "Disable all" and not switch.value)
-local generalStart = (#tasks + #slayerTasks) * 6 + 5
+local generalStart = (#tasks + #slayerTasks) * 6 + 7
 local dropdown = controls[generalStart + 1]
 local enabledFirst = controls[generalStart + 2].checkbox
 local combo = dropdown.combo
@@ -116,11 +119,11 @@ assert(controls[generalStart].y == dropdown.y and controls[generalStart].alignVe
 fail = false
 combo:Select(2, true)
 assert(rules.general.taskOrder == "alphabetical" and settings.load().general.taskOrder == "alphabetical")
-assert(controls[1].y > controls[43 * 6 + 1].y, "Alphabetical order must reposition existing cards")
-assert(controls[7].y < controls[37].y, "The Barrows Brothers must sort under B, before Dagannoth Kings")
+assert(controls[2].y > controls[43 * 6 + 2].y, "Alphabetical order must reposition existing cards")
+assert(controls[8].y < controls[38].y, "The Barrows Brothers must sort under B, before Dagannoth Kings")
 enabledFirst:SetSelected("enabledFirst", true)
 assert(rules.general.enabledFirst and settings.load().general.enabledFirst)
-assert(controls[1].y >= controls[(#tasks - 1) * 6 + 1].y, "Disabled tasks must follow enabled tasks")
+assert(controls[2].y >= controls[(#tasks - 1) * 6 + 2].y, "Disabled tasks must follow enabled tasks")
 fail = true
 enabledFirst:SetSelected("enabledFirst", false)
 assert(rules.general.enabledFirst and enabledFirst.selected, "Failed ordering saves must restore preferences")
@@ -131,8 +134,8 @@ fail = false
 combo:Select(3, true)
 assert(rules.general.taskOrder == "alphabeticalDescending"
     and settings.load().general.taskOrder == "alphabeticalDescending")
-assert(controls[7].y > controls[37].y, "Descending order must put Barrows after Dagannoth Kings")
-assert(controls[1].y >= controls[(#tasks - 1) * 6 + 1].y,
+assert(controls[8].y > controls[38].y, "Descending order must put Barrows after Dagannoth Kings")
+assert(controls[2].y >= controls[(#tasks - 1) * 6 + 2].y,
     "Descending order must keep disabled tasks after enabled tasks")
 fail = true
 combo:Select(2, true)
@@ -151,17 +154,17 @@ destroy(); assert(destroyed and combo.destroyed and enabledFirst.destroyed)
 controls = {}
 fail = false
 local refreshRibbon, destroyRibbon = require("ui/settings-view").build({ width = 300, height = 600 }, rules, pretty, 1)
-assert(controls[7].y == controls[1].y + 40 and controls[7].ax == 0)
+assert(controls[8].y == controls[2].y + 40 and controls[8].ax == 0)
 rules.reaper[tasks[1]] = true
 refreshRibbon()
-assert(controls[6].value and controls[3].rgba == 0x23412DE8, "Views must reflect shared preferences")
-controls[4].callbacks[1]()
-assert(not controls[6].value and not rules.reaper[tasks[1]], "Ribbon cards must toggle too")
-local ribbonAll = controls[#tasks * 6 + 2]
+assert(controls[7].value and controls[4].rgba == 0x23412DE8, "Views must reflect shared preferences")
+controls[5].callbacks[1]()
+assert(not controls[7].value and not rules.reaper[tasks[1]], "Ribbon cards must toggle too")
+local ribbonAll = controls[#tasks * 6 + 3]
 ribbonAll.callbacks[1]()
 for _, name in ipairs(tasks) do assert(rules.reaper[name] == false) end
 assert(ribbonAll.label == "Disable all")
-controls[#tasks * 6 + 1].callbacks[1]()
+controls[#tasks * 6 + 2].callbacks[1]()
 for _, name in ipairs(tasks) do assert(rules.reaper[name] == true) end
 assert(ribbonAll.label == "Disable all")
 destroyRibbon()
