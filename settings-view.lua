@@ -113,8 +113,6 @@ function view.build(host, rules, pretty, columns, showGeneral)
     for index, action in ipairs({ { label = "Enable all", enabled = true },
         { label = "Disable all", enabled = false } }) do
         local button = track(ui.Button.new(page.content))
-        button:SetPos(index == 1 and 10 or 4, 8, (index - 1) / 2, 0)
-        button:SetSize(-14, 30, 0.5, 0)
         button.stylesheetID = id.StyleSheet.BUTTON_DEFAULT
         button.label = action.label
         button:Subscribe(ui.Hook.ONBUTTONPRESSED, function() return setAll(action.enabled) end)
@@ -140,6 +138,19 @@ function view.build(host, rules, pretty, columns, showGeneral)
         end
         local cardWidth = automatic and (available - 14) / columns - 6
             or available / columns - (columns == 1 and 20 or 14)
+        local function placeColumn(control, column, y, height)
+            if automatic then
+                control:SetPos(10 + column * 6 / columns, y, column / columns, 0)
+                control:SetSize(-6 - 14 / columns, height, 1 / columns, 0)
+            else
+                control:SetPos(column == 0 and 10 or 4, y, column / columns, 0)
+                control:SetSize(columns == 1 and -20 or -14, height, 1 / columns, 0)
+            end
+        end
+        for index, button in ipairs(allButtons) do
+            placeColumn(button, (index - 1) % columns,
+                8 + math.floor((index - 1) / columns) * 34, 30)
+        end
         local heights = {}
         for index, entry in ipairs(entries) do
             local lines, line = {}, ""
@@ -156,7 +167,7 @@ function view.build(host, rules, pretty, columns, showGeneral)
             local row = math.floor((index - 1) / columns) + 1
             heights[row] = math.max(heights[row] or 36, #lines * 18 + 4)
         end
-        local y = 48
+        local y = columns == 1 and 82 or 48
         for index, entry in ipairs(entries) do
             local column = (index - 1) % columns
             local row = math.floor((index - 1) / columns) + 1
@@ -166,13 +177,7 @@ function view.build(host, rules, pretty, columns, showGeneral)
             entry.hitTarget:SetSize(0, height, 1, 0)
             entry.label:SetSize(-46, height - 4, 1, 0)
             entry.switch:SetPos(-30, (height - 22) / 2, 1, 0)
-            if automatic then
-                entry.layer:SetPos(10 + column * 6 / columns, y, column / columns, 0)
-                entry.layer:SetSize(-6 - 14 / columns, height, 1 / columns, 0)
-            else
-                entry.layer:SetPos(column == 0 and 10 or 4, y, column / columns, 0)
-                entry.layer:SetSize(columns == 1 and -20 or -14, height, 1 / columns, 0)
-            end
+            placeColumn(entry.layer, column, y, height)
             if column == columns - 1 or index == #entries then y = y + height + 4 end
         end
         page:SetContentHeight(y + 8)

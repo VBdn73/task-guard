@@ -8,7 +8,7 @@ id = { Font = { MUSEO_SANS_11PT_REGULAR = 1 }, StyleSheet = { CHECKBOX_DEFAULT =
 config = { Font = { FromID = function()
     return { GetStringWidth = function(_, name) return name == tasks[2] and 200 or #name * 7 end }
 end } }
-local layers, labels = {}, {}
+local layers, labels, buttons = {}, {}, {}
 local function control(parent)
     return { parent = parent, SetPos = function(self, ...)
             self.pos = { ... }; self.positionWrites = (self.positionWrites or 0) + 1
@@ -23,6 +23,7 @@ for _, kind in ipairs({ "Layer", "Rectangle", "Button", "Text", "Check" }) do
         local result = control(parent)
         if kind == "Layer" then layers[#layers + 1] = result end
         if kind == "Text" then labels[#labels + 1] = result end
+        if kind == "Button" then buttons[#buttons + 1] = result end
         return result
     end }
 end
@@ -55,6 +56,18 @@ local rules = { reaper = {} }
 for _, name in ipairs(tasks) do rules.reaper[name] = true end
 local view = require("settings-view")
 local refresh, destroy = view.build(host, rules, pretty, "auto")
+local function assertButtonColumns()
+    local first = 1
+    for _, button in ipairs(buttons) do
+        if button.label == "Enable all" or button.label == "Disable all" then
+            local card = layers[first]
+            assert(button.size[1] == card.size[1] and button.size[3] == card.size[3],
+                "Bulk buttons must have exactly the task column width")
+            if button.label == "Disable all" then first = #tasks + 1 end
+        end
+    end
+end
+assertButtonColumns()
 local information = labels[#labels]
 assert(information.content:find("does not block", 1, true), "General tab must explain that tasks are not blocked")
 assert(information.content:gsub("<br>", " "):find("accidental clicks", 1, true),
@@ -66,6 +79,7 @@ for _ = 1, 10 do refresh() end
 assert(layers[1].positionWrites == writes, "Idle view refreshes must not relayout cards")
 host.width = 540
 refresh()
+assertButtonColumns()
 assert(layers[1].size[3] == 1 / 2, "Resize should fit two columns")
 assert(layers[#tasks + 1].size[3] == 1 / 2,
     "A long Slayer name must not prevent two columns")
@@ -73,12 +87,17 @@ assert(labels[#tasks + 2].content:find("<br>", 1, true), "Long Slayer names must
 assert(layers[#tasks + 2].size[2] > 36, "Wrapped cards must grow to fit their labels")
 host.width = 520
 refresh()
+assertButtonColumns()
 assert(layers[1].size[3] == 1, "Scrollbar width must be included at a column threshold")
 host.width = 300
 refresh()
-assert(layers[2].pos[2] == 88, "Narrow ribbon should have one column")
+assertButtonColumns()
+assert(layers[2].pos[2] == 122, "Narrow ribbon should have one column below stacked buttons")
+assert(buttons[#tasks + 1].pos[2] == 8 and buttons[#tasks + 2].pos[2] == 42,
+    "Single-column bulk buttons must stack without overlapping")
 host.width = 1100
 refresh()
+assertButtonColumns()
 assert(layers[1].size[3] == 1 / 4, "Growing the ribbon should add columns again")
 active = 3
 refresh()
@@ -91,7 +110,9 @@ assert(not layers[1].hidden)
 destroy()
 assert(destroyed)
 layers = {}
+buttons = {}
 view.build(host, rules, pretty, 2)
+assertButtonColumns()
 assert(layers[1].size[3] == 1 / 2 and layers[2].pos[1] == 4,
     "Settings menu must retain its existing fixed layout")
 layers = {}
