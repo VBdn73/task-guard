@@ -9,6 +9,11 @@ PersistentDB = {
 }
 local settings = require("task-settings")
 local tasks = require("reaper-tasks")
+assert(#tasks == 48 and tasks[1] == "Araxxi" and tasks[2] == "The Barrows Brothers")
+assert(tasks[23] == "Gregorovic" and tasks[24] == "Helwyr")
+assert(tasks[43] == "The Gate of Elidinis" and tasks[44] == "Amascut, the Devourer")
+assert(tasks[47] == "Silverquill, the Dreadhog" and tasks[48] == "The Ghrazi Blood Knights",
+    "Default catalogue must match the captured client row order")
 local rules = settings.load()
 local seen = {}
 for _, name in ipairs(tasks) do
