@@ -1,6 +1,7 @@
 -- Move complete captured native rows, never replace text or dispatch actions.
 local tasks = require("reaper-tasks")
 local requirements = require("reaper-requirements")
+local taskOrder = require("task-order")
 local ordering = {}
 
 function ordering.new(rules)
@@ -141,7 +142,7 @@ function ordering.new(rules)
         table.sort(snapshot.rows, function(a, b)
             local aEnabled, bEnabled = rules.reaper[a.name] ~= false, rules.reaper[b.name] ~= false
             if general.enabledFirst and aEnabled ~= bEnabled then return aEnabled end
-            if general.taskOrder == "alphabetical" then return a.name:lower() < b.name:lower() end
+            if general.taskOrder == "alphabetical" then return taskOrder.alphabetical(a.name, b.name) end
             return a.y == b.y and a.x < b.x or a.y < b.y
         end)
         for index, row in ipairs(snapshot.rows) do

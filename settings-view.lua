@@ -1,5 +1,6 @@
 local tasks = require("reaper-tasks")
 local settings = require("task-settings")
+local taskOrder = require("task-order")
 local view = {}
 
 function view.build(host, rules, pretty, columns, showGeneral)
@@ -121,7 +122,7 @@ function view.build(host, rules, pretty, columns, showGeneral)
                 return rules.reaper[a.name] == true
             end
             if rules.general.taskOrder == "alphabetical" then
-                return a.name:lower() < b.name:lower()
+                return taskOrder.alphabetical(a.name, b.name)
             end
             return a.index < b.index
         end)

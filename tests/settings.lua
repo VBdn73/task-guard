@@ -88,7 +88,8 @@ assert(controls[generalStart].y == dropdown.y and controls[generalStart].alignVe
 fail = false
 combo:Select(2, true)
 assert(rules.general.taskOrder == "alphabetical" and settings.load().general.taskOrder == "alphabetical")
-assert(controls[7].y > controls[37].y, "Alphabetical order must reposition existing cards")
+assert(controls[1].y > controls[43 * 6 + 1].y, "Alphabetical order must reposition existing cards")
+assert(controls[7].y < controls[37].y, "The Barrows Brothers must sort under B, before Dagannoth Kings")
 enabledFirst:SetSelected("enabledFirst", true)
 assert(rules.general.enabledFirst and settings.load().general.enabledFirst)
 assert(controls[1].y >= controls[(#tasks - 1) * 6 + 1].y, "Disabled tasks must follow enabled tasks")
