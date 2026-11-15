@@ -1,7 +1,7 @@
 local current, made
 local popupHost = { xyGlobal = { x = 100, y = 100 } }
 local parent = { parent = popupHost }
-local label = { type = 2, content = "Helwyr", visibleGlobal = true, parent = parent,
+local label = { type = 2, content = "Helwyr", visibleGlobal = true, parent = parent, rgba = 0xD0CDC5FF,
     x = 248, y = 263, width = 230, height = 20, xyGlobal = { x = 426, y = 710 } }
 current = label
 ui = { ComponentType = { LABEL = 2 }, Hook = { ONBUTTONPRESSED = 1, ONMOUSEOVER = 2, ONMOUSELEAVE = 3, ONMOUSEREPEAT = 4 },
@@ -25,6 +25,17 @@ function ui.Button.new(host)
     return made
 end
 local background, popup
+local artwork = {}
+ui.Sprite = { new = function(host)
+    assert(host == parent)
+    local sprite = { type = 3, parent = host, visibleGlobal = true,
+        SetPos = function(self, x, y) self.x, self.y = x, y end,
+        SetSize = function(self, w, h) self.width, self.height = w, h end,
+        MoveToFront = function() end,
+        Destroy = function(self) assert(not self.dead); self.dead = true end }
+    artwork[#artwork + 1] = sprite
+    return sprite
+end }
 prettyui = { Tooltip = { attach = function(target, host, options)
     assert(target == made)
     assert(host == popupHost, "Popup must render outside the native choice list")
@@ -48,9 +59,26 @@ local probe = require("reaper-overlay").new({ label = {
 assert(probe.show():find("shown", 1, true))
 assert(made.enabled == true and made.clickthrough == false)
 assert(made.stylesheetID == -1, "Shield must not use animated button styling")
-assert(made.text.rgba == 0xBDB8AEFF)
+assert(made.text.rgba == label.rgba, "Shield text must use the native label colour")
 assert(made.label == "Helwyr", "Shield must redraw readable text above the dark background")
-assert(background.rgba == 0x00000080, "Blocked row must darken the background at 50% opacity")
+assert(background.rgba == 0x181818FF, "Cover must be opaque so native highlights cannot show through")
+assert(#artwork == 9)
+local xs, ys, widths, heights = { 0, 8, 222 }, { 0, 8, 12 }, { 8, 214, 8 }, { 8, 4, 8 }
+for index = 0, 8 do
+    local sprite = artwork[index + 1]
+    local column, row = index % 3 + 1, math.floor(index / 3) + 1
+    assert(sprite.sprite == 18504 + index and sprite.rgba == 0xFFFFFFFF)
+    assert(sprite.x == label.x + xs[column] and sprite.y == label.y + ys[row])
+    assert(sprite.width == widths[column] and sprite.height == heights[row])
+    assert(sprite.clickthrough and sprite.enabled == false)
+    sprite.spriteID = sprite.sprite
+end
+local captured = {}
+for _, sprite in ipairs(artwork) do require("reaper-requirements").capture(sprite, parent, captured) end
+assert(#captured == 0, "Owned artwork must not be mistaken for native requirements")
+assert(not require("reaper-requirements").isBlocked(label, artwork))
+made.hooks[ui.Hook.ONBUTTONPRESSED]()
+assert(background.rgba == 0x181818FF and made.stylesheetID == -1)
 assert(popup.hidden and popup.options.placement == "above")
 assert(popup.options.constrainToParent == false)
 assert(popup.options.x == 326 and popup.options.y == 544)
@@ -83,6 +111,7 @@ label.xyGlobal.y = 711
 probe.update()
 assert(made.dead, "Moving target must remove shield")
 assert(background.dead, "Moving target must remove background")
+for _, sprite in ipairs(artwork) do assert(sprite.dead, "Moving target must remove disabled artwork") end
 assert(popup.dead, "Moving target must remove hover popup")
 probe.remove()
 probe.show()
@@ -95,11 +124,13 @@ assert(probe.show():find("failed", 1, true))
 assert(label.enabled == nil, "Must not mutate native enabled state")
 label.content = "Helwyr"
 background = nil
+artwork = {}
 local requirementProbe = require("reaper-overlay").new({ name = "Helwyr", requirements = true,
     resolve = function() return label end })
 assert(requirementProbe.show():find("shown", 1, true))
 assert(made.clickthrough == true and made.label == "", "Requirements hover target must be transparent and click-through")
 assert(background == nil, "Preserve the native disabled background")
+assert(#artwork == 0, "Requirements-only mode must preserve native artwork")
 assert(made.hooks[ui.Hook.ONBUTTONPRESSED] == nil, "Never intercept native clicks in tooltip-only mode")
 assert(popup.options.text == "Blocked by requirements")
 made.hooks[ui.Hook.ONMOUSEOVER]()

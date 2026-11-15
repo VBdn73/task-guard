@@ -1,9 +1,11 @@
 -- Owned mouse shield. Never selects or modifies a native game action.
 local overlay = {}
+local requirements = require("reaper-requirements")
 
 function overlay.new(config, prettyUILibrary)
     local name = config.name or "Helwyr"
     local shield, background, tooltip, target, parent, geometry, refreshTooltipPosition
+    local artwork = {}
     local function remove()
         local old = shield
         local oldBackground = background
@@ -13,6 +15,11 @@ function overlay.new(config, prettyUILibrary)
         tooltip = nil
         refreshTooltipPosition = nil
         local errors = {}
+        for _, sprite in ipairs(artwork) do
+            local ok, err = pcall(function() sprite:Destroy() end)
+            if not ok then errors[#errors + 1] = tostring(err) end
+        end
+        artwork = {}
         if oldTooltip then
             local ok, err = pcall(function() oldTooltip:Destroy() end)
             if not ok then errors[#errors + 1] = tostring(err) end
@@ -59,10 +66,26 @@ function overlay.new(config, prettyUILibrary)
                     background:SetPos(target.x, target.y)
                     background:SetSize(target.width, target.height)
                     background.fill = true
-                    -- Strongly darken the background; redraw readable text above it.
-                    background.rgba = 0x00000080
+                    -- Fully cover native hover/press states, including transparent
+                    -- pixels in the disabled artwork. Never dim the live row.
+                    background.rgba = 0x181818FF
                     background.clickthrough = true
                     background:MoveToFront()
+                    assert(target.width >= 16 and target.height >= 16, "Row too small for disabled artwork")
+                    local xs, ys = { 0, 8, target.width - 8 }, { 0, 8, target.height - 8 }
+                    local widths, heights = { 8, target.width - 16, 8 }, { 8, target.height - 16, 8 }
+                    for index = 0, 8 do
+                        local column, row = index % 3 + 1, math.floor(index / 3) + 1
+                        local sprite = ui.Sprite.new(parent)
+                        artwork[#artwork + 1] = sprite
+                        requirements.markOwned(sprite)
+                        sprite.sprite = 18504 + index
+                        sprite:SetPos(target.x + xs[column], target.y + ys[row])
+                        sprite:SetSize(widths[column], heights[row])
+                        sprite.rgba = 0xFFFFFFFF
+                        sprite.clickthrough, sprite.enabled = true, false
+                        sprite:MoveToFront()
+                    end
                 end
                 shield = ui.Button.new(parent)
                 -- Match the verified label rectangle, not guessed padding into nearby choices.
@@ -72,7 +95,7 @@ function overlay.new(config, prettyUILibrary)
                 -- Keep inputs enabled to avoid risking click-through.
                 shield.stylesheetID = -1
                 shield.text.font = target.font or id.Font.MUSEO_SANS_15PT_REGULAR
-                shield.text.rgba = 0xBDB8AEFF
+                shield.text.rgba = target.rgba or 0xBDB8AEFF
                 shield.label = config.requirements and "" or target.content
                 shield.enabled = true
                 shield.clickthrough = config.requirements == true

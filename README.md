@@ -11,7 +11,7 @@ Task Guard is intended to help prevent unwanted Slayer cape choices and Reaper's
 - Ribbon task toggles using the same saved preferences, with one task per row.
 - Dynamic discovery of new, unique visible task labels in the validated Reaper choice list. Discovered tasks are saved locally, default to enabled, and appear in both menus automatically.
 - Task names are used directly for display, persistence and native matching, without runtime aliases. Legacy Telos/Black Stone Dragon/Giant Mole settings are migrated once, preserving disabled preferences. A future game-side rename is treated as a new enabled task.
-- Mouse shield with a translucent dark overlay to give Helwyr a disabled appearance while retaining the native entry and border, without button hover/press animation, plus a hover popup explaining that it is blocked by plugin settings rather than game requirements.
+- Mouse shield with an opaque cover and the captured native disabled-row sprites (`18504–18512`), preventing native hover/press highlights from showing through without changing row bounds, plus a hover popup explaining that it is blocked by plugin settings rather than game requirements. The visual match needs in-client verification.
 - Validation of the captured label's identity, visibility and bounds before creating the overlay.
 - Removal on detected target movement/replacement, with shutdown cleanup attempts.
 - PrettyUI hover tooltip; scoped enumeration of the captured choice list, without global scans, native enabled-state changes, automatic task actions or additional permissions.

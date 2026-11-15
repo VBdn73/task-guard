@@ -1,9 +1,14 @@
 -- Captured native disabled background, not a direct requirements API.
 local requirements = {}
+local owned = setmetatable({}, { __mode = "k" })
+
+function requirements.markOwned(c)
+    owned[c] = true
+end
 
 -- Copy native sprite properties once during the guard's existing list traversal.
 function requirements.capture(c, parent, sprites)
-    if c and c.type == 3 and not c.isRestricted and c.visibleGlobal and c.parent == parent then
+    if c and not owned[c] and c.type == 3 and not c.isRestricted and c.visibleGlobal and c.parent == parent then
         sprites[#sprites + 1] = { parent = parent, type = 3, visibleGlobal = true,
             x = c.x, y = c.y, width = c.width, height = c.height, spriteID = c.spriteID }
     end
@@ -18,7 +23,7 @@ function requirements.isBlocked(label, sprites)
         local xs, ys, widths, heights = { 0, 8, 222 }, { 0, 8, 12 }, { 8, 214, 8 }, { 8, 4, 8 }
         local seen, count, ambiguous = {}, 0, false
         local function inspect(c)
-            if c and not c.isRestricted and c.visibleGlobal and c.parent == parent
+            if c and not owned[c] and not c.isRestricted and c.visibleGlobal and c.parent == parent
                 and c.type == 3 and c.x < x + w and c.x + c.width > x
                 and c.y < y + h and c.y + c.height > y then
                 local index = c.spriteID and c.spriteID - 18504
