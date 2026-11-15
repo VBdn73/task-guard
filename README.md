@@ -6,7 +6,9 @@ Task Guard is intended to help prevent unwanted Slayer cape choices and Reaper's
 
 ## Current features
 
-- Plugin settings and ribbon controls to show/remove a Helwyr overlay.
+- Reaper and Slayer settings tabs styled like Pre-flight Check, with two Reaper tasks per row, green enabled/red disabled backgrounds and checkboxes. Slayer is empty for now.
+- Saved Reaper preferences (enabled means allowed; all tasks are allowed by default). These do not yet automatically block native choices.
+- Ribbon controls to show/remove the manual Helwyr overlay.
 - Mouse shield with a translucent dark overlay to give Helwyr a disabled appearance while retaining the native entry and border, without button hover/press animation, plus a hover popup explaining that it is blocked by plugin settings rather than game requirements.
 - Validation of the captured label's identity, visibility and bounds before creating the overlay.
 - Removal on detected target movement/replacement, with shutdown cleanup attempts.
@@ -25,7 +27,7 @@ pon task-guard
 
 After Lua changes, run `prl task-guard`; after manifest changes, run `prf` first. PrettyUI (dependency ID `6398181`) must be available.
 
-With Reaper's Choice open and Helwyr visible, open Task Guard settings and press **Overlay Helwyr**. Use **Remove overlay** when finished. The overlay covers the known text bounds only and is removed rather than reapplied when movement is detected.
+With Reaper's Choice open and Helwyr visible, open Task Guard's content/ribbon controls and press **Overlay Helwyr**. Use **Remove overlay** when finished. The overlay covers the known text bounds only and is removed rather than reapplied when movement is detected.
 
 **A failed block can select a task.** Only test a choice you are willing to receive. Edges, context menus, keyboard/controller routes and separate confirmation paths are not verified. Close/reopen the game dialog if cleanup fails. Confirm the approach is permitted with Jagex before distributing.
 
@@ -34,6 +36,7 @@ Run the mocked tests using Lua 5.4 from this directory:
 ```powershell
 lua tests/lifecycle.lua
 lua tests/reaper-overlay.lua
+lua tests/settings.lua
 ```
 
 Mocks do not verify native rendering or click interception.
@@ -54,7 +57,7 @@ changelog.md                Version history
 
 ## Planned behaviour
 
-Separate, user-managed Slayer and Reaper guard lists, empty by default. Never automatically choose, accept, reroll or complete tasks. Leave unrelated interfaces and unknown choices unchanged. Do not modify the game's own block/prefer lists. These features are not implemented.
+Apply saved Reaper preferences to verified native choices, and add a user-managed Slayer guard list. Never automatically choose, accept, reroll or complete tasks. Leave unrelated interfaces and unknown choices unchanged. Do not modify the game's own block/prefer lists. Automatic protection is not implemented.
 
 ## Feedback and collaboration
 
@@ -62,7 +65,7 @@ Report bugs and suggestions to [vincent.rs.plugins@gmail.com](mailto:vincent.rs.
 
 ## Permissions and data protection
 
-No additional permissions are requested. The overlay reads the configured component's type, restriction, visibility, exact text, parent and geometry. It creates plugin-owned UI and logs overlay actions/errors to the client console. It does not read chat, inventory or character identity, persist settings, transmit data externally or change native task actions. The captured label address is stored in `reaper-config.lua`; dynamic IDs are not assumed to be stable.
+No additional permissions are requested. Reaper preferences are saved locally through PersistentDB. The overlay reads the configured component's type, restriction, visibility, exact text, parent and geometry. It creates plugin-owned UI and logs overlay actions/errors to the client console. It does not read chat, inventory or character identity, transmit data externally or change native task actions. The captured label address is stored in `reaper-config.lua`; dynamic IDs are not assumed to be stable.
 
 ## EULA
 

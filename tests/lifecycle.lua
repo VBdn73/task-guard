@@ -38,6 +38,10 @@ function ui.Text.new(host)
     }
 end
 ui.Button.new = ui.Text.new
+package.loaded["settings-view"] = { build = function(host)
+    local control = ui.Text.new(host)
+    return function() end, function() control:Destroy() end
+end }
 
 dofile("main.lua")
 assert(type(PluginShutdown) == "function")
@@ -45,10 +49,10 @@ assert(type(PluginShutdown) == "function")
 local host = {}
 handlers[1]["taskGuard.settings"]({ component = host })
 handlers[2]["taskGuard.content"]({ component = host })
-assert(created == 6 and destroyed == 0)
+assert(created == 4 and destroyed == 0)
 
 handlers[1]["taskGuard.settings"]({ component = host })
-assert(created == 9 and destroyed == 3, "Reopening must clean up the old view")
+assert(created == 5 and destroyed == 1, "Reopening must clean up the old view")
 
 PluginShutdown()
 assert(destroyed == created, "Shutdown must clean up all views")
