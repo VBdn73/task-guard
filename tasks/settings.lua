@@ -1,7 +1,19 @@
 local tasks = require("tasks/reaper/catalogue")
 local slayerTasks = require("tasks/slayer/catalogue")
 local settings = {}
-local STORAGE_KEY = "taskGuard.tasks.v1"
+local STORAGE_KEY = "taskGuard.tasks.v1.displayName."
+local contexts = setmetatable({}, { __mode = "k" })
+local defaultTasks = {}
+for i, name in ipairs(tasks) do defaultTasks[i] = name end
+local function getCharacterContext()
+    if Player and Player.IsAvailable() then
+        local player = Player.GetEntity()
+        if player and player.isValid and type(player.displayName) == "string" then
+            local name = player.displayName:match("^%s*(.-)%s*$"):lower()
+            if name ~= "" then return name end
+        end
+    end
+end
 local NAME_VERSION = 2
 local MAX_NAME_LENGTH = 120
 local LEGACY_REAPER_NAMES = { ["Telos, the Warden"] = "Telos",
@@ -19,7 +31,14 @@ local function validName(name)
 end
 
 function settings.load()
-    local ok, saved = pcall(function() return PersistentDB:GetStructuredData(STORAGE_KEY) end)
+    local context = getCharacterContext()
+    local ok, saved = false, nil
+    if context then
+        ok, saved = pcall(function() return PersistentDB:GetStructuredData(STORAGE_KEY .. context) end)
+    end
+    -- Discovered tasks belong to the character too, not the previous session.
+    for i = #tasks, 1, -1 do tasks[i] = nil end
+    for i, name in ipairs(defaultTasks) do tasks[i] = name end
     local migrated = ok and type(saved) == "table" and saved.nameVersion ~= NAME_VERSION
     if migrated then
         -- Legacy storage migration only. Runtime matching uses exact native names.
@@ -68,6 +87,7 @@ function settings.load()
             end
         end
     end
+    contexts[rules] = context
     if migrated and not settings.save(rules) then
         print("[task-guard] Could not save native task-name migration; preferences retained for this session.")
     end
@@ -75,6 +95,8 @@ function settings.load()
 end
 
 function settings.save(rules)
+    local context = getCharacterContext()
+    if not context or contexts[rules] ~= context then return false end
     local general = rules.general or {}
     local data = { nameVersion = NAME_VERSION, reaper = {}, slayer = {}, discovered = {}, general = {
         taskOrder = validOrder(general.taskOrder),
@@ -86,8 +108,16 @@ function settings.save(rules)
     end
     -- Persist the complete catalogue so dynamically discovered names survive reloads.
     for _, name in ipairs(tasks) do data.discovered[#data.discovered + 1] = name end
-    local ok, result = pcall(function() return PersistentDB:SetStructuredData(STORAGE_KEY, data) end)
+    local ok, result = pcall(function() return PersistentDB:SetStructuredData(STORAGE_KEY .. context, data) end)
     return ok and result ~= false
+end
+
+function settings.refresh(rules)
+    if contexts[rules] == getCharacterContext() then return false end
+    local loaded = settings.load()
+    rules.reaper, rules.slayer, rules.general = loaded.reaper, loaded.slayer, loaded.general
+    contexts[rules] = contexts[loaded]
+    return true
 end
 
 function settings.discover(rules, names)

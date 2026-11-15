@@ -13,6 +13,8 @@ local aliases = { Kalphites = "Kalphite", Kurasks = "Kurask", Turoths = "Turoth"
     ["Profane Scabarites"] = "Profane scabarites", ["Ravenous Strigoi"] = "Ravenous strigoi" }
 local saved = { nameVersion = 2, reaper = { Helwyr = false }, slayer = {} }
 for old in pairs(aliases) do saved.slayer[old] = false; assert(not known[old]) end
+Player = { IsAvailable = function() return true end,
+    GetEntity = function() return { isValid = true, displayName = "Test Character" } end }
 PersistentDB = {
     GetStructuredData = function() return saved end,
     SetStructuredData = function(_, _, value) saved = value; return true end,

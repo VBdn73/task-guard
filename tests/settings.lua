@@ -1,4 +1,6 @@
 local saved, fail
+Player = { IsAvailable = function() return true end,
+    GetEntity = function() return { isValid = true, displayName = "Test Character" } end }
 PersistentDB = {
     GetStructuredData = function() return saved end,
     SetStructuredData = function(_, _, data)

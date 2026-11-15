@@ -1,6 +1,7 @@
 local constants = require("constants")
 local settingsView = require("ui/settings-view")
-local rules = require("tasks/settings").load()
+local settings = require("tasks/settings")
+local rules = settings.load()
 local tasks = require("tasks/reaper/catalogue")
 local refreshViews = {}
 local destroyViews = {}
@@ -21,10 +22,11 @@ Event.MiniMenuOpened.Subscribe(constants.EVENT_PREFIX .. ".slayerMenuOpened", fu
 end)
 Event.Logic.Subscribe(constants.EVENT_PREFIX .. ".overlay", function()
     if stopped then return end
+    local characterChanged = settings.refresh(rules)
     overlay.update()
     slayerOverlay.update()
     local count = #tasks
-    if count ~= taskCount then
+    if characterChanged or count ~= taskCount then
         taskCount = count
         for kind, host in pairs(hosts) do openView(kind, host) end
     end

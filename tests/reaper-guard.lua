@@ -1,5 +1,7 @@
 -- Reconciliation tests; native mouse interception still needs client testing.
 local created, removed = {}, {}
+Player = { IsAvailable = function() return true end,
+    GetEntity = function() return { isValid = true, displayName = "Test Character" } end }
 PersistentDB = { SetStructuredData = function() return true end }
 package.loaded["ui/task-overlay"] = { new = function(config)
     local target, shown
@@ -29,7 +31,8 @@ ui = { ComponentType = { LABEL = 2 }, Interfaces = { GetComponent = function(_, 
     assert(interface == 1761)
     return static == 1 and list or title
 end } }
-local rules = { reaper = { Helwyr = false, Nex = false } }
+local rules = require("tasks/settings").load()
+rules.reaper.Helwyr, rules.reaper.Nex = false, false
 local guard = require("tasks/reaper/guard").new(rules)
 guard.update()
 assert(created.Helwyr.isShown() and created.Nex.isShown())
