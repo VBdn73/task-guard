@@ -18,13 +18,10 @@ function view.build(host, rules, pretty, columns, showGeneral)
     local page = tabs:GetPage(pageIndex)
     local columns = columns or 2
     local automatic = columns == "auto"
-    local minimumCardWidth = 0
+    local minimumCardWidth = 246
+    local font = config.Font.FromID(id.Font.MUSEO_SANS_11PT_REGULAR)
     if automatic then
-        local font = config.Font.FromID(id.Font.MUSEO_SANS_11PT_REGULAR)
-        for _, name in ipairs(tasks) do
-            -- Label inset plus space for the checkbox and right-hand padding.
-            minimumCardWidth = math.max(minimumCardWidth, math.ceil(font:GetStringWidth(name, true)) + 46)
-        end
+        -- Long names wrap instead of dictating the width of every card.
         columns = 1
     end
     local entries = {}
@@ -95,7 +92,8 @@ function view.build(host, rules, pretty, columns, showGeneral)
         switch:Subscribe(ui.Hook.ONBUTTONPRESSED, function() return toggle("checkbox") end)
         hitTarget:Subscribe(ui.Hook.ONBUTTONPRESSED, function() return toggle("card") end)
         update()
-        entries[#entries + 1] = { layer = layer, update = update, name = name, index = index }
+        entries[#entries + 1] = { layer = layer, update = update, name = name, index = index,
+            frame = frame, background = background, hitTarget = hitTarget, label = label, switch = switch }
     end
     local function setAll(enabled)
         local old = {}
@@ -135,23 +133,49 @@ function view.build(host, rules, pretty, columns, showGeneral)
             end
             return a.index < b.index
         end)
+        local available = page._scroll.contentWidth or page.content.width
         if automatic then
-            local available = page._scroll.contentWidth or page.content.width
             -- Ten-pixel outside margins and six-pixel gaps between cards.
             columns = math.max(1, math.min(#tasks, math.floor((available - 14) / (minimumCardWidth + 6))))
         end
+        local cardWidth = automatic and (available - 14) / columns - 6
+            or available / columns - (columns == 1 and 20 or 14)
+        local heights = {}
+        for index, entry in ipairs(entries) do
+            local lines, line = {}, ""
+            for word in entry.name:gmatch("%S+") do
+                local candidate = line == "" and word or line .. " " .. word
+                if line ~= "" and font:GetStringWidth(candidate, true) > math.max(1, cardWidth - 46) then
+                    lines[#lines + 1], line = line, word
+                else
+                    line = candidate
+                end
+            end
+            lines[#lines + 1] = line
+            entry.label.content = table.concat(lines, "<br>")
+            local row = math.floor((index - 1) / columns) + 1
+            heights[row] = math.max(heights[row] or 36, #lines * 18 + 4)
+        end
+        local y = 48
         for index, entry in ipairs(entries) do
             local column = (index - 1) % columns
-            local y = 48 + math.floor((index - 1) / columns) * 40
+            local row = math.floor((index - 1) / columns) + 1
+            local height = heights[row]
+            entry.frame:SetSize(0, height, 1, 0)
+            entry.background:SetSize(-2, height - 2, 1, 0)
+            entry.hitTarget:SetSize(0, height, 1, 0)
+            entry.label:SetSize(-46, height - 4, 1, 0)
+            entry.switch:SetPos(-30, (height - 22) / 2, 1, 0)
             if automatic then
                 entry.layer:SetPos(10 + column * 6 / columns, y, column / columns, 0)
-                entry.layer:SetSize(-6 - 14 / columns, 36, 1 / columns, 0)
+                entry.layer:SetSize(-6 - 14 / columns, height, 1 / columns, 0)
             else
                 entry.layer:SetPos(column == 0 and 10 or 4, y, column / columns, 0)
-                entry.layer:SetSize(columns == 1 and -20 or -14, 36, 1 / columns, 0)
+                entry.layer:SetSize(columns == 1 and -20 or -14, height, 1 / columns, 0)
             end
+            if column == columns - 1 or index == #entries then y = y + height + 4 end
         end
-        page:SetContentHeight(56 + math.ceil(#tasks / columns) * 40)
+        page:SetContentHeight(y + 8)
         lastOrderKey = orderKey()
     end
     local contentWidth
