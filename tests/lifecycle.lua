@@ -51,14 +51,15 @@ function ui.Text.new(host)
 end
 ui.Button.new = ui.Text.new
 local ribbonState
-package.loaded["ui/settings-view"] = { build = function(host, _, _, _, showGeneral, state)
-    if not showGeneral then
+package.loaded["ui/settings-view"] = { build = function(host, _, _, columns, showGeneral, state)
+    assert(showGeneral == true, "Both settings and ribbon must include General settings")
+    if columns == "auto" then
         if ribbonState then
-            assert(state == ribbonState and state.activeIndex == 2,
+            assert(state == ribbonState and state.activeIndex == 3,
                 "Ribbon rebuilds must retain their selected tab state")
         end
         ribbonState = state
-        state.activeIndex = 2
+        state.activeIndex = 3
     end
     local control = ui.Text.new(host)
     return function() assert(not refreshFails, "Disposed host") end, function() control:Destroy() end

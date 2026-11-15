@@ -64,7 +64,13 @@ local pretty = { Tabs = { new = function(_, defs, options)
         GetActiveIndex = function() return active end,
         Destroy = function() destroyed = true end }
 end } }
-pretty.ComboBox = require("tests/support/combo-box-mock")(control)
+local dropdowns = {}
+local comboMock = require("tests/support/combo-box-mock")(control)
+pretty.ComboBox = { new = function(parent, options)
+    local combo = comboMock.new(parent, options)
+    dropdowns[#dropdowns + 1] = combo
+    return combo
+end }
 pretty.CheckboxButton = require("tests/support/checkbox-mock")(control)
 local rules = { reaper = {} }
 for _, name in ipairs(tasks) do rules.reaper[name] = true end
@@ -105,6 +111,11 @@ assertButtonColumns()
 assert(layers[1].size[3] == 1, "Scrollbar width must be included at a column threshold")
 host.width = 300
 refresh()
+assert(dropdowns[1].root.pos[1] == 10 and dropdowns[1].root.pos[2] == 42,
+    "Narrow General settings must put the dropdown below its label")
+assert(dropdowns[1].root.size[1] == pages[1]._scroll.contentWidth - 20,
+    "Stacked dropdown must fill the available width within the page margins")
+assert(information.pos[2] == 130, "Stacked dropdown must move the following content down")
 assertButtonColumns()
 assert(layers[2].pos[2] == 160, "Narrow settings should have one column below stacked buttons")
 assert(buttons[#tasks + 1].pos[2] == 8 and buttons[#tasks + 2].pos[2] == 42,
@@ -112,6 +123,9 @@ assert(buttons[#tasks + 1].pos[2] == 8 and buttons[#tasks + 2].pos[2] == 42,
 assert(inputs[1].pos[2] == 81, "Single-column search must sit below both bulk buttons")
 host.width = 1100
 refresh()
+assert(dropdowns[1].root.pos[1] == 95 and dropdowns[1].root.pos[2] == 8
+    and dropdowns[1].root.size[1] == 250,
+    "Wide General settings must restore the inline dropdown")
 assertButtonColumns()
 assert(layers[1].size[3] == 1 / 4, "Growing the ribbon should add columns again")
 local cardWidth = pages[2]._scroll.contentWidth / 4 + layers[1].size[1]
@@ -173,31 +187,34 @@ rules.general.enabledFirst = true
 rules.reaper[tasks[1]] = false
 local ribbonState = {}
 local inputCount = #inputs
-local refreshRibbon = view.build(host, rules, pretty, "auto", false, ribbonState)
+local refreshRibbon = view.build(host, rules, pretty, "auto", true, ribbonState)
 assert(#inputs == inputCount + 2, "Ribbon must have separate Reaper and Slayer search fields")
 assert(inputs[#inputs - 1].pos[2] == 47, "Search must sit below the bulk buttons")
-assert(#definitions == 2 and definitions[1].text == "Reaper" and definitions[2].text == "Slayer",
-    "Ribbon must not include General settings")
+assert(#definitions == 3 and definitions[1].text == "General" and definitions[2].text == "Reaper"
+    and definitions[3].text == "Slayer", "Ribbon must include the same settings tabs as the settings menu")
+active = 2
+tabOptions.onChange(nil, 2)
+refreshRibbon()
 assert(not layers[1].hidden and layers[1].pos[2] > layers[2].pos[2],
     "Ribbon must still apply saved ordering preferences")
 rules.reaper[tasks[1]] = true
 refreshRibbon()
 assert(layers[1].pos[2] == 86, "Shared enabled-first changes must trigger layout")
-active = 2
-tabOptions.onChange(nil, 2)
-assert(ribbonState.activeIndex == 2, "Tab clicks must immediately remember Slayer before a resize")
+active = 3
+tabOptions.onChange(nil, 3)
+assert(ribbonState.activeIndex == 3, "Tab clicks must immediately remember Slayer before a resize")
 refreshRibbon()
 assert(layers[1].hidden)
 host.width = 540
 refreshRibbon()
-assert(active == 2 and layers[1].hidden and not layers[#tasks + 1].hidden,
+assert(active == 3 and layers[1].hidden and not layers[#tasks + 1].hidden,
     "Shrinking the ribbon must keep the Slayer tab selected")
 host.width, host.height = 1100, 400
 refreshRibbon()
-assert(active == 2 and layers[1].hidden and not layers[#tasks + 1].hidden,
+assert(active == 3 and layers[1].hidden and not layers[#tasks + 1].hidden,
     "Growing the ribbon must keep the Slayer tab selected")
 layers = {}
-view.build(host, rules, pretty, "auto", false, ribbonState)
-assert(active == 2 and layers[1].hidden and not layers[#tasks + 1].hidden,
+view.build(host, rules, pretty, "auto", true, ribbonState)
+assert(active == 3 and layers[1].hidden and not layers[#tasks + 1].hidden,
     "Rebuilding cleared ribbon components must restore the Slayer tab")
 print("Task Guard settings view tests passed")

@@ -295,6 +295,12 @@ function view.build(host, rules, pretty, columns, showGeneral, state)
         local available = math.max(100, (generalPage._scroll.contentWidth or generalPage.content.width) - 20)
         if available ~= informationWidth then
             informationWidth = available
+            local stacked = available < 335
+            dropdown.root:SetPos(stacked and 10 or 95, stacked and 42 or 8)
+            dropdown.root:SetSize(stacked and available or 250, 34)
+            enabledCheckbox.root:SetPos(10, stacked and 84 or 50)
+            local informationY = stacked and 130 or 96
+            information:SetPos(10, informationY)
             local lines, line = {}, ""
             for word in informationText:gmatch("%S+") do
                 local candidate = line == "" and word or line .. " " .. word
@@ -307,7 +313,7 @@ function view.build(host, rules, pretty, columns, showGeneral, state)
             lines[#lines + 1] = line
             information.content = table.concat(lines, "<br>")
             information:SetSize(available, #lines * 20)
-            generalPage:SetContentHeight(106 + #lines * 20)
+            generalPage:SetContentHeight(informationY + 10 + #lines * 20)
         end
     end
     local function saveGeneral(key, value)
@@ -339,12 +345,12 @@ function view.build(host, rules, pretty, columns, showGeneral, state)
             active = selected
             for _, control in ipairs(generalControls) do control.hidden = active ~= 1 end
         end
-        if showGeneral and active == 1 then updateGeneral() end
         local resized = host.width ~= width or host.height ~= height
         if resized then
             width, height = host.width, host.height
             for i = 1, #tabDefinitions do tabs:GetPage(i)._scroll:Refresh() end
         end
+        if showGeneral and active == 1 then updateGeneral() end
         for _, taskPage in ipairs(taskPages) do taskPage.refresh(active, resized) end
     end
     refresh()
